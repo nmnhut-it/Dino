@@ -47,35 +47,38 @@
 ### Slide 3: DINO Demo - Attention Maps
 **Style**: Visual-heavy, before/after
 **Layout**: 3-column (Input | Attention Heads | Insight)
+**Image**: `n01440764_tench.JPEG` (con cá tench từ ImageNet)
 
 **Nội dung**:
-- Ảnh con chó (input)
-- 3 attention maps:
-  - Head 1: Highlight đầu
-  - Head 2: Highlight thân
-  - Head 3: Highlight nền
+- Ảnh con cá tench (input) - file: n01440764_tench.JPEG
+- 3 attention maps (simulated):
+  - Head 1: Highlight đầu cá
+  - Head 2: Highlight thân + vây
+  - Head 3: Highlight nền (vải xanh)
 - Text: "Không ai dạy - model TỰ HỌC phân biệt!"
 
 **Speaker Notes**:
-"Trước khi đi vào lý thuyết, hãy xem DINO làm được gì. Đây là attention maps từ các heads khác nhau. Điều kỳ lạ là không ai dạy model 'đây là đầu', 'đây là thân' - nó tự học cách tách vật thể khỏi nền. Đây là emerging property rất thú vị."
+"Trước khi đi vào lý thuyết, hãy xem DINO làm được gì. Đây là ảnh con cá tench từ ImageNet. Attention maps từ các heads khác nhau tự động focus vào các phần khác nhau: đầu cá, thân cá, và nền. Điều kỳ lạ là không ai dạy model 'đây là đầu', 'đây là vây' - nó tự học cách tách vật thể khỏi nền. Đây là emerging property rất thú vị."
 
 ---
 
 ### Slide 4: Core Insight - Local → Global
 **Style**: Diagram with arrows
 **Layout**: Top = analogy, Bottom = DINO application
+**Image**: Crop từ `n01440764_tench.JPEG` để minh họa local/global
 
 **Nội dung**:
-- Analogy: "Thấy vây cá → Biết là con cá"
+- Analogy với ảnh cá tench: "Thấy vây cá → Biết là con cá"
+- Visual: Global crop (cả con cá) vs Local crop (chỉ vây/đuôi)
 - Diagram:
   ```
   Global crop (Teacher nhìn) ←──── So sánh ────→ Local crop (Student nhìn)
-       [Cả con cá]                                    [Chỉ vây]
+       [Cả con cá tench]                              [Chỉ vây đuôi]
   ```
 - Key insight: "Student phải đoán toàn cảnh từ góc nhỏ"
 
 **Speaker Notes**:
-"Ý tưởng cốt lõi của DINO cực kỳ đơn giản: nếu bạn thấy một cái vây cá, bạn biết đó là con cá. DINO áp dụng nguyên lý này - Teacher nhìn toàn bộ ảnh, Student chỉ nhìn một góc nhỏ, và Student phải đoán output giống Teacher. Điều này buộc Student phải HIỂU ngữ cảnh, không chỉ copy pixel."
+"Ý tưởng cốt lõi của DINO cực kỳ đơn giản: nhìn vào ảnh con cá tench này - nếu bạn chỉ thấy cái vây đuôi màu vàng, bạn vẫn biết đó là con cá. DINO áp dụng nguyên lý này - Teacher nhìn toàn bộ ảnh (cả con cá), Student chỉ nhìn một góc nhỏ (vây đuôi), và Student phải đoán output giống Teacher. Điều này buộc Student phải HIỂU ngữ cảnh, không chỉ copy pixel."
 
 ---
 

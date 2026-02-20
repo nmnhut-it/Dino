@@ -400,37 +400,51 @@ Student nhìn cục bộ (local crop), học bắt chước Teacher. Buộc hi�
   addTitle(s, "Multi-crop: Local → Global");
   addProgress(s, 2);
 
-  s.addShape(pres.shapes.RECTANGLE, {
-    x: M + 0.2, y: 1.4, w: 4.8, h: 3.6,
-    fill: { color: C.tableAlt }, line: { color: C.lightGray, width: 1 },
+  // Fish image (tench from ImageNet) as example
+  s.addImage({
+    path: "n01440764_tench.JPEG",
+    x: M + 0.2, y: 1.4, w: 4.0, h: 3.0,
   });
-  s.addText("Ảnh gốc\n(2 global + 6 local)", {
-    x: M + 0.2, y: 2.4, w: 4.8, h: 1.5,
-    fontFace: FONT, fontSize: MIN_FONT, color: C.gray, align: "center", valign: "middle",
+  s.addText("Global crop", {
+    x: M + 0.2, y: 4.4, w: 4.0, h: 0.4,
+    fontFace: FONT, fontSize: 20, italic: true, color: C.green, align: "center",
   });
 
-  const rx = M + 5.5;
+  // Local crop indicator (small box on the tail area)
+  s.addShape(pres.shapes.RECTANGLE, {
+    x: M + 0.4, y: 2.8, w: 1.2, h: 1.2,
+    fill: { type: "none" }, line: { color: C.red, width: 3, dashType: "dash" },
+  });
+  s.addText("Local\ncrop", {
+    x: M + 0.4, y: 2.9, w: 1.2, h: 1.0,
+    fontFace: FONT, fontSize: 14, bold: true, color: C.red, align: "center", valign: "middle",
+  });
+
+  const rx = M + 4.8;
   s.addText([
     { text: "Global: 224×224, >50% ảnh", options: { bold: true, fontSize: MIN_FONT, color: C.green, breakLine: true } },
-    { text: "→ Teacher nhận", options: { fontSize: 26, color: C.gray, breakLine: true } },
+    { text: "→ Teacher nhìn cả con cá", options: { fontSize: 24, color: C.gray, breakLine: true } },
     { text: "", options: { fontSize: 14, breakLine: true } },
     { text: "Local: 96×96, <50% ảnh", options: { bold: true, fontSize: MIN_FONT, color: C.red, breakLine: true } },
-    { text: "→ Student nhận cả 2 loại", options: { fontSize: 26, color: C.gray } },
+    { text: "→ Student chỉ thấy vây đuôi", options: { fontSize: 24, color: C.gray, breakLine: true } },
+    { text: "", options: { fontSize: 14, breakLine: true } },
+    { text: "Student phải đoán output", options: { fontSize: 26, color: C.black, breakLine: true } },
+    { text: "giống Teacher!", options: { fontSize: 26, bold: true, color: C.red } },
   ], {
-    x: rx, y: 1.6, w: 6.0, h: 3.5,
+    x: rx, y: 1.4, w: 7.5, h: 4.0,
     fontFace: FONT, align: "left", margin: 0,
   });
 
-  s.addText("Thấy cái vây → phải biết là con cá", {
+  s.addText("Thấy vây đuôi → phải biết là con cá tench", {
     x: M, y: 5.5, w: CW, h: 0.6,
     fontFace: FONT, fontSize: MIN_FONT, italic: true, color: C.gray, align: "center", margin: 0,
   });
 
-  addSource(s, "Caron et al. ICCV 2021 · SwAV (Caron 2020)");
+  addSource(s, "Caron et al. ICCV 2021 · Ảnh: ImageNet (n01440764)");
 
   s.addNotes(`Multi-crop: từ 1 ảnh tạo 2 global crop và 6 local crop.
 
-Ý tưởng: nhìn cái vây cá thôi cũng phải biết là con cá — local-to-global.
+Nhìn ảnh con cá tench này: Teacher nhìn cả con cá (global), Student chỉ thấy vây đuôi (local). Student phải đoán output giống Teacher — tức là từ cái vây phải biết đây là con cá.
 
 Chi phí: local crop 96² chỉ 18% pixel so với global 224². 6 local ≈ 1 global thêm. 8 góc nhìn thay vì 2, compute chỉ +50%.
 
