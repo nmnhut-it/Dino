@@ -1,0 +1,17 @@
+# Dependencies
+node_modules/
+
+# Generated files
+*.pptx
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# IDE
+.vscode/
+.idea/
+
+# Temporary files
+*.tmp
+*.log
