@@ -285,17 +285,82 @@ Student chỉ thấy cái vây, nhưng phải đoán "đây là cá" (giống Te
 └──────────────────────────────────────────────────────────────┘
 ```
 
+### Kiến trúc chi tiết
+
+**Network Structure**: `g = h ∘ f` (backbone f + projection head h)
+
+```
+Input Image → ViT Backbone (f) → CLS token → Projection Head (h) → Output
+                 │                   │              │
+                 │                   │              └─→ 3-layer MLP
+                 │                   │                  2048 hidden dim
+                 │                   │                  K output dims
+                 │                   │                  Weight normalized
+                 │                   │                  L2 normalized
+                 │                   │
+                 │                   └─→ 768-dim (ViT-B)
+                 │
+                 └─→ 12 Transformer blocks
+                     12 attention heads
+                     **Hoàn toàn KHÔNG có Batch Normalization**
+```
+
+**Đặc điểm quan trọng**:
+- **No predictor**: Student và Teacher dùng cùng kiến trúc (khác BYOL)
+- **BN-free ViT**: Không dùng Batch Normalization → ổn định hơn
+- **Weight normalization**: Áp dụng trên output layer của projection head
+- **K = 65,536**: Số prototypes lớn, cho phép học representations phong phú
+
 ### Các thành phần chính
 
-| Thành phần | Mô tả | Tham số |
-|------------|-------|---------|
-| **ViT backbone** | Vision Transformer | ViT-B: 86M params |
-| **Projection head** | MLP 3 layers | 768 → 2048 → 2048 → K |
-| **K (prototypes)** | Số "categories" ẩn | 65,536 |
-| **τ (temperature)** | Độ sắc nét softmax | Teacher: 0.04, Student: 0.1 |
-| **λ (EMA)** | Tỷ lệ giữ Teacher | 0.996 → 1.0 |
+| Thành phần | Mô tả | Tham số chi tiết |
+|------------|-------|------------------|
+| **ViT backbone** | Vision Transformer | ViT-B: 86M params, 12 blocks, 12 heads |
+| **Projection head** | MLP 3 layers | 768 → 2048 → 2048 → K (weight normalized) |
+| **K (prototypes)** | Số "categories" ẩn | **65,536** dimensions |
+| **τ (temperature)** | Độ sắc nét softmax | Teacher: **0.04**, Student: **0.1** |
+| **λ (EMA)** | Tỷ lệ giữ Teacher | **0.996 → 1.0** (cosine schedule) |
+| **Centering momentum** | Tốc độ cập nhật center | **m = 0.9** |
 
-## 2.3 EMA: Exponential Moving Average
+## 2.3 Loss Function - Công thức chi tiết
+
+### Softmax với Temperature
+
+**Student probability**:
+```
+P_s(x)[k] = exp(g_θs(x)[k] / τ_s) / Σ_k' exp(g_θs(x)[k'] / τ_s)
+```
+
+**Teacher probability** (với centering):
+```
+P_t(x)[k] = exp((g_θt(x)[k] - c[k]) / τ_t) / Σ_k' exp((g_θt(x)[k'] - c[k']) / τ_t)
+```
+
+**Cross-Entropy Loss**:
+```
+L = -Σ_k P_t(x)[k] · log P_s(x')[k]
+```
+
+Trong đó:
+- `x` = global crop (Teacher nhìn)
+- `x'` = local hoặc global crop (Student nhìn)
+- `g_θ` = projection head output (K dimensions)
+- `c` = running mean center
+- `τ_t = 0.04`, `τ_s = 0.1`
+
+### Trực quan
+
+```
+Teacher output (τ=0.04):    Student output (τ=0.1):
+[0.95, 0.02, 0.01, ...]    [0.60, 0.20, 0.10, ...]
+       ↓                           ↓
+    Rất sắc                    Mềm hơn
+    (confident)               (uncertain)
+```
+
+Student được phép "mềm" hơn, nhưng phải học theo hướng của Teacher.
+
+## 2.4 EMA: Exponential Moving Average
 
 ### Công thức
 
@@ -303,9 +368,18 @@ Student chỉ thấy cái vây, nhưng phải đoán "đây là cá" (giống Te
 θ_T ← λ · θ_T + (1-λ) · θ_S
 ```
 
-Với λ = 0.996:
-- Teacher giữ 99.6% giá trị cũ
-- Teacher lấy 0.4% từ Student
+**Cosine Schedule**:
+```
+λ(t) = 1 - (1 - λ_base) × (1 + cos(πt/T)) / 2
+
+λ_base = 0.996
+t = current step
+T = total steps
+```
+
+Với λ_base = 0.996:
+- **Bắt đầu**: λ ≈ 0.996 (Teacher cập nhật 0.4% từ Student mỗi step)
+- **Kết thúc**: λ → 1.0 (Teacher gần như đóng băng)
 
 ### Tại sao cần EMA?
 
@@ -317,11 +391,23 @@ Với λ = 0.996:
 - Teacher ổn định → Student có mục tiêu rõ ràng
 - Như thầy giáo kinh nghiệm: không đổi ý kiến theo từng câu hỏi
 
-### Cosine Schedule
+### Key Insight từ Paper: Teacher > Student
 
-λ tăng từ 0.996 → 1.0 theo cosine schedule:
-- Đầu training: Teacher học nhanh hơn (0.996)
-- Cuối training: Teacher gần như không đổi (≈1.0)
+**Quan sát quan trọng**: Teacher performance **tốt hơn** Student trong suốt quá trình training!
+
+```
+Training Progress:
+Step        Student Acc    Teacher Acc
+10K         45%            52%
+50K         62%            68%
+100K        70%            75%
+Final       75%            80.1%  ← Dùng Teacher weights
+```
+
+**Tại sao?**
+- Polyak-Ruppert averaging: EMA = ensemble của nhiều models
+- Teacher = "trung bình" của tất cả Student versions
+- Trung bình thường tốt hơn từng cá thể
 
 ## 2.4 Multi-crop Strategy
 
@@ -341,47 +427,87 @@ Student: nhận cả global và local crops
 
 **Kết quả**: 8 góc nhìn khác nhau, chỉ +50% compute so với 2 crops.
 
-## 2.5 Centering và Sharpening
+## 2.6 Centering và Sharpening - Chống Collapse
 
 ### Collapse là gì?
 
-Collapse = mọi ảnh cho ra cùng 1 output
-
-Có 2 loại:
-1. **Mode collapse**: Tất cả output = 1 vector cố định
-2. **Uniform collapse**: Tất cả output = phân bố đều [1/K, 1/K, ...]
-
-### Centering (chống mode collapse)
+Collapse = mọi ảnh cho ra cùng 1 output. Có 2 loại:
 
 ```
-g(x) = f(x) - c
+Mode Collapse:                    Uniform Collapse:
+┌─────────────────┐              ┌─────────────────┐
+│       ●         │              │ ● ● ● ● ● ● ● ● │
+│      ●●●        │              │ ● ● ● ● ● ● ● ● │
+│      ●●●        │              │ ● ● ● ● ● ● ● ● │
+│       ●         │              │ ● ● ● ● ● ● ● ● │
+└─────────────────┘              └─────────────────┘
+Tất cả → 1 điểm                  Trải đều → không phân biệt
 ```
 
-Trong đó c là running mean của output Teacher:
+### Centering - Công thức chi tiết
+
+**Update rule** (mỗi batch):
 ```
-c ← m · c + (1-m) · mean(f(x))  (m = 0.9)
-```
+c ← m·c + (1-m) · (1/B) Σᵢ g_θt(xᵢ)
 
-Trừ đi mean → không cho 1 chiều dominate.
-
-### Sharpening (chống uniform collapse)
-
-Temperature τ = 0.04 rất thấp:
-- Softmax output gần one-hot
-- Teacher buộc phải "chọn" rõ ràng
-
-```
-Không sharpening: [0.2, 0.2, 0.2, 0.2, 0.2] → Teacher nói "không biết"
-Có sharpening:    [0.9, 0.03, 0.03, 0.02, 0.02] → Teacher nói "đây!"
+m = 0.9 (momentum)
+B = batch size
+g_θt(xᵢ) = teacher output cho sample i
 ```
 
-### Ablation
+**Áp dụng vào teacher**:
+```
+g_t(x) ← g_t(x) - c
+```
 
-| Setting | Kết quả |
-|---------|---------|
-| Bỏ centering | Collapse sau 1 epoch |
-| Bỏ sharpening | Collapse chậm hơn, vẫn xảy ra |
-| Cả hai | Ổn định |
+**Tại sao hoạt động?**
+- Trừ mean → zero-centered
+- Không cho 1 dimension dominate (tất cả outputs ≈ cùng 1 giá trị)
+- Chỉ dùng first-order batch statistics → hoạt động với mọi batch size
+
+**Side effect**: Centering khuyến khích uniform collapse! (mean = 0 cho mọi ảnh)
+
+### Sharpening - Công thức chi tiết
+
+```
+τ_teacher = 0.04  (rất thấp → phân bố sắc)
+τ_student = 0.1   (cao hơn → phân bố mềm)
+```
+
+**Softmax với temperature**:
+```
+softmax(x/τ) = exp(x/τ) / Σ exp(x/τ)
+
+τ nhỏ → exp(x/τ) lớn → winner-take-all
+τ lớn → exp(x/τ) đều → phân bố đều
+```
+
+**Ví dụ**:
+```
+Raw logits: [2.0, 1.5, 1.0, 0.5]
+
+τ = 1.0:  [0.47, 0.28, 0.17, 0.08]  ← mềm
+τ = 0.1:  [0.97, 0.02, 0.01, 0.00]  ← sắc (gần one-hot)
+τ = 0.04: [0.99, 0.01, 0.00, 0.00]  ← rất sắc
+```
+
+### Centering + Sharpening = Balance
+
+| Chỉ có | Hậu quả |
+|--------|---------|
+| Centering alone | → Uniform collapse (mean=0 nhưng đều) |
+| Sharpening alone | → Mode collapse (1 dimension dominate) |
+| **Cả hai** | **Ổn định**: peaked nhưng diverse |
+
+### Ablation từ Paper
+
+| Setting | ImageNet | Status |
+|---------|----------|--------|
+| Full DINO | **80.1%** | ✓ Ổn định |
+| Bỏ EMA (train cả Teacher) | — | ✗ Collapse ngay |
+| Bỏ Centering | — | ✗ Collapse epoch 1 |
+| Bỏ Sharpening (τ_t = τ_s = 0.1) | — | ✗ Collapse chậm |
+| Bỏ Multi-crop | 72.3% | ✓ Ổn định nhưng kém |
 
 ## 2.6 Emerging Properties
 
@@ -423,83 +549,140 @@ Head 3: Focus vào nền (cỏ, trời)
 | Chỉ classification | Dense tasks (seg, depth) |
 | Chỉ DINO loss | DINO + iBOT + KoLeo |
 
-## 3.2 LVD-142M: Data Curation
+## 3.2 LVD-142M: Data Curation Pipeline Chi Tiết
 
-### Pipeline
+### Pipeline với số liệu cụ thể
 
 ```
-Crawl 1.2B ảnh từ internet
-         │
-         ▼
-    Lọc NSFW, low-quality
-         │
-         ▼
-    Loại trùng bằng SSCD
-    (Self-Supervised Copy Detection)
-         │
-         ▼
-    Chọn qua Faiss nearest neighbor
-    (embed ảnh, so với ImageNet embedding)
-         │
-         ▼
-    142M ảnh curated
+┌─────────────────────────────────────────────────────────────────┐
+│                     DATA CURATION PIPELINE                       │
+├─────────────────────────────────────────────────────────────────┤
+│                                                                  │
+│  1.2B raw images (web crawl)                                    │
+│         │                                                        │
+│         ▼  Safety filtering                                      │
+│         │  • NSFW classifier                                     │
+│         │  • Restricted domains blacklist                        │
+│         │                                                        │
+│  1.1B images                                                     │
+│         │                                                        │
+│         ▼  PCA hash deduplication                                │
+│         │  • Exact & near-exact duplicates                       │
+│         │                                                        │
+│  744M images                                                     │
+│         │                                                        │
+│         ▼  Copy-detection deduplication                          │
+│         │  • SSCD model (Self-Supervised Copy Detection)         │
+│         │  • Cosine similarity > 0.6                             │
+│         │  • k=64 nearest neighbors checked                      │
+│         │                                                        │
+│         ▼  Benchmark leak removal                                │
+│         │  • Remove images similar to test sets                  │
+│         │  • Cosine similarity > 0.45                            │
+│         │                                                        │
+│         ▼  Self-supervised retrieval                             │
+│         │  • ViT-H/16 pretrained features                        │
+│         │  • k-means: 100,000 clusters                           │
+│         │  • Sample from each cluster                            │
+│         │                                                        │
+│  142M curated images (LVD-142M)                                 │
+│                                                                  │
+└─────────────────────────────────────────────────────────────────┘
+
+Implementation: Faiss library, GPU-accelerated
+Hardware: 20 nodes × 8 V100 GPUs
 ```
 
 ### Key insight: Quality > Quantity
 
-| Data | ImageNet Linear |
-|------|-----------------|
-| Raw 1.2B | 84.2% |
-| Curated 142M | **86.5%** |
+| Dataset | Size | ImageNet Linear | ADE20k mIoU |
+|---------|------|-----------------|-------------|
+| Raw uncurated | 1.2B | 84.2% | 46.3 |
+| **LVD-142M** | **142M** | **86.5%** | **49.0** |
+| Ratio | ×0.12 | +2.3% | +2.7 |
 
-Ít hơn 8 lần nhưng kết quả tốt hơn!
+**Ít hơn 8× nhưng tốt hơn trên TẤT CẢ benchmarks!**
 
 **Tại sao?**
-- Raw data: trùng lặp, NSFW, logo, watermark, phân bố lệch
-- Curated: đa dạng, sạch, cân bằng
+```
+Raw 1.2B data problems:          Curated 142M:
+┌────────────────────┐          ┌────────────────────┐
+│ ●●●●●●●●●●●● (dupes)│          │ ● ● ● ● ● ● ●      │
+│ NSFW content       │    →      │ Clean, diverse     │
+│ Logos, watermarks  │          │ Balanced classes   │
+│ Biased distribution│          │ No benchmark leaks │
+└────────────────────┘          └────────────────────┘
+```
 
-## 3.3 Three Losses
+## 3.3 Three Losses - Chi tiết công thức
 
 ### DINO Loss (kế thừa từ v1)
 
 ```
-L_DINO = -Σ P_t · log(P_s)
+L_DINO = -Σ_k P_t(x)[k] · log P_s(x')[k]
 ```
 
-Dùng CLS token → hiểu toàn cục.
+Áp dụng trên **CLS token** → hiểu global semantics.
 
-### iBOT Loss (mới)
+### iBOT Loss - Masked Patch Prediction
 
-**Ý tưởng**: Che một số patches, bắt Student đoán token từ Teacher.
+**Ý tưởng cốt lõi**: Che patches, dự đoán **semantic token** (không phải pixel).
 
 ```
-Input:     [CLS] [P1] [MASK] [P3] [MASK] [P5] ...
-                       ↓           ↓
-                  Đoán token    Đoán token
-                  từ Teacher    từ Teacher
+┌─────────────────────────────────────────────────────────────┐
+│                         iBOT Architecture                    │
+├─────────────────────────────────────────────────────────────┤
+│                                                              │
+│  Student input:    [CLS] [P1] [MASK] [P3] [MASK] [P5] ...   │
+│                                 ↓           ↓                │
+│  Student predicts:         p_s(i)       p_s(j)              │
+│                                 ↓           ↓                │
+│                           Cross-entropy loss                 │
+│                                 ↑           ↑                │
+│  Teacher targets:          p_t(i)       p_t(j)              │
+│                                 ↑           ↑                │
+│  Teacher input:    [CLS] [P1] [P2]  [P3] [P4]  [P5] ...     │
+│                          (FULL image - no masking)           │
+│                                                              │
+└─────────────────────────────────────────────────────────────┘
 ```
 
-**Khác MAE thế nào?**
+**Công thức**:
+```
+L_iBOT = -Σᵢ∈M p_t(i) · log(p_s(i))
+
+M = set of masked patch indices
+p_t = Sinkhorn-Knopp centered teacher probability
+p_s = Student softmax probability
+```
+
+**So sánh MAE vs iBOT**:
 
 | Aspect | MAE | iBOT |
 |--------|-----|------|
-| Đoán gì? | Pixel RGB | Semantic token |
-| Level | Low-level | High-level |
-| Ví dụ | "Pixel màu xanh" | "Đây là phần tai" |
+| **Target** | Pixel values (RGB) | Prototype scores from teacher |
+| **Loss** | MSE reconstruction | Cross-entropy |
+| **Level** | Low-level (texture) | High-level (semantic) |
+| **Features** | Requires finetuning | **Works frozen** |
+| **Ví dụ** | "Pixel màu xanh" | "Đây là phần tai chó" |
 
 **Tại sao quan trọng?**
-- DINO loss: Chỉ hiểu global (CLS)
+- DINO loss: Chỉ hiểu global (CLS token)
 - iBOT loss: Hiểu local (từng patch)
-- Cần cả hai cho dense tasks (segmentation)
+- **Cần cả hai** cho dense tasks (segmentation)
 
-### KoLeo Loss (mới)
+**At scale**: UNTIED heads work better (separate DINO and iBOT projection heads)
+
+### KoLeo Loss - Uniform Distribution
 
 **Vấn đề**: Embeddings có thể tụ lại thành clusters → mất đa dạng.
 
-**Giải pháp**: Đẩy nearest neighbors ra xa.
-
+**Công thức** (Kozachenko-Leonenko differential entropy estimator):
 ```
-L_KoLeo = -1/n Σᵢ log(min_{j≠i} ||zᵢ - zⱼ||)
+L_KoLeo = -(1/n) Σᵢ log(d_{n,i})
+
+d_{n,i} = min_{j≠i} ||xᵢ - xⱼ||   (L2 distance to nearest neighbor)
+xᵢ = L2-normalized CLS features
 ```
 
 **Trực quan**:
@@ -508,18 +691,37 @@ Before KoLeo:          After KoLeo:
     ●●●                    ●      ●
    ●●●●●      →              ●  ●
     ●●●                  ●      ●
-(tụ lại)              (trải đều)
+(clustering)          (uniformly spread)
 ```
 
-### Ablation
+**Implementation details**:
+- Weight: **λ_KoLeo = 0.1**
+- Applied on: CLS tokens only
+- Global crop: First global crop only
+- Gradient: Maximizes distance to nearest neighbor
 
-| Bỏ loss nào? | ImageNet | ADE20k (seg) |
-|--------------|----------|--------------|
-| Baseline | 86.5% | 49.0 |
-| Bỏ iBOT | 86.3% | **44.8** (−4.2) |
-| Bỏ KoLeo | 86.0% | 48.5 |
+### Combined Loss
 
-iBOT quan trọng nhất cho dense tasks!
+```
+L_total = L_DINO + L_iBOT + 0.1 × L_KoLeo
+```
+
+| Loss | Target | Purpose | Operates on |
+|------|--------|---------|-------------|
+| DINO | CLS token | Global semantics | CLS only |
+| iBOT | Masked patches | Dense/local features | Patch tokens |
+| KoLeo | Batch diversity | Prevent collapse | CLS only |
+
+### Ablation Results
+
+| Bỏ loss nào? | ImageNet Linear | ADE20k mIoU | Δ mIoU |
+|--------------|-----------------|-------------|--------|
+| **Full (baseline)** | **86.5%** | **49.0** | — |
+| Bỏ iBOT | 86.3% | 44.8 | **−4.2** |
+| Bỏ KoLeo | 86.0% | 48.5 | −0.5 |
+| Bỏ cả iBOT+KoLeo | 85.8% | 42.1 | −6.9 |
+
+**Key insight**: iBOT quan trọng nhất cho dense tasks!
 
 ## 3.4 Register Tokens
 
@@ -541,129 +743,361 @@ Thêm 4-8 learnable tokens (không gắn với patch nào):
 
 Register tokens đóng vai trò "bãi đỗ" — hút attention thừa, làm sạch attention map cho các patches thật.
 
-## 3.5 Kết Quả v2
+## 3.5 Model Scaling
 
-| Benchmark | DINOv2 | iBOT | MAE | OpenCLIP |
-|-----------|--------|------|-----|----------|
-| ImageNet | **86.5%** | 82.3% | 73.5% | 83.5% |
-| ADE20k | **49.0** | 44.8 | — | — |
+### ViT Variants
+
+| Model | Params | Blocks | Embed Dim | FFN | Heads |
+|-------|--------|--------|-----------|-----|-------|
+| ViT-S/14 | 22M | 12 | 384 | MLP | 6 |
+| ViT-B/14 | 86M | 12 | 768 | MLP | 12 |
+| ViT-L/14 | 307M | 24 | 1024 | MLP | 16 |
+| **ViT-g/14** | **1.1B** | **40** | **1536** | **SwiGLU** | **24** |
+
+### Patch Size: 14 vs 16
+
+| Patch | Resolution | Patches | Compute | Detail |
+|-------|------------|---------|---------|--------|
+| /16 | 224×224 | 196 | Lower | Less |
+| **/14** | 224×224 | **256** | **Higher** | **More** |
+
+DINOv2 chọn **/14** để có độ phân giải cao hơn cho dense tasks.
+
+## 3.6 Kết Quả v2
+
+### So sánh với các phương pháp khác
+
+| Benchmark | DINOv2 (ViT-g) | iBOT | MAE | OpenCLIP |
+|-----------|----------------|------|-----|----------|
+| ImageNet Linear | **86.5%** | 82.3% | 73.5% | 83.5% |
+| ADE20k mIoU (frozen) | **49.0** | 44.8 | — | — |
+| ADE20k mIoU (Mask2Former) | **60.2** | — | — | — |
+| Oxford Retrieval mAP | **+41%** | baseline | — | — |
+
+### Scaling Law
+
+| Model | Params | ImageNet | ADE20k |
+|-------|--------|----------|--------|
+| ViT-S | 22M | 81.1% | 42.5 |
+| ViT-B | 86M | 84.5% | 45.8 |
+| ViT-L | 307M | 86.3% | 48.2 |
+| **ViT-g** | **1.1B** | **86.5%** | **49.0** |
 
 **DINOv2 = Foundation model cho vision**
 - 1 backbone dùng cho nhiều tasks
-- Không cần fine-tune (frozen features)
-- Vượt tất cả phương pháp khác
+- **Không cần fine-tune** (frozen features)
+- Vượt tất cả phương pháp SSL khác
 
 ---
 
 # Part 4: DINOv3 (2025)
 
-## 4.1 Scaling Challenges
+## 4.1 Scaling Challenge - Không Phải Divergence!
 
-### Câu hỏi: Scale có giới hạn không?
+### Scale
 
 | Aspect | v2 | v3 | Scale |
 |--------|-----|-----|-------|
-| Model | 1.1B | 7B | ×6.4 |
-| Data | 142M | 1.69B | ×12 |
+| Model | 1.1B | **6.7B** | ×6 |
+| Data | 142M | **1.69B** | ×12 |
 
-### Vấn đề: Training Instability
+### Vấn đề thực sự: Dense Feature DEGRADATION
 
-Model 7B params không dễ train:
-- Loss bùng nổ (explode)
-- Gradient không ổn định
-- Diverge sau vài nghìn steps
+**KHÔNG phải** divergence hay loss explosion thông thường!
 
-## 4.2 Gram Anchoring
+```
+┌─────────────────────────────────────────────────────────────┐
+│                  THE REAL PROBLEM                            │
+├─────────────────────────────────────────────────────────────┤
+│                                                              │
+│  Segmentation Performance (ADE20k mIoU):                    │
+│                                                              │
+│  mIoU ↑                                                      │
+│   50 │        ●●●●                                          │
+│   45 │      ●      ●●                                       │
+│   40 │    ●            ●●                                   │
+│   35 │  ●                  ●●●●●●                           │
+│   30 │●                              ●●●●●                  │
+│      └─────────────────────────────────────→ Training steps │
+│         0     100k   200k   300k   400k   500k              │
+│                  ↑                                           │
+│           PEAK at ~200k, then DECLINES!                     │
+│                                                              │
+└─────────────────────────────────────────────────────────────┘
+```
+
+**Nguyên nhân**:
+1. CLS token và patch outputs trở nên **quá giống nhau**
+2. Patches "sụp đổ" về phía global summary (CLS)
+3. Mất **local specificity** → dense tasks suffer
+4. DINO global loss **dominate** over iBOT patch-level loss
+
+**Key insight**: Problem không phải training không hội tụ, mà là **hội tụ sai**!
+
+## 4.2 Gram Anchoring - Derivation Chi Tiết
 
 ### Gram Matrix là gì?
 
-Cho feature matrix F (mỗi cột là 1 feature):
-
+**Định nghĩa**:
 ```
-G = F × Fᵀ
-```
+Cho X = P × d matrix (P patches, d dimensions)
+Mỗi hàng = 1 patch feature (L2-normalized)
 
-G[i,j] = dot product giữa feature i và feature j = **correlation**
+G = X · Xᵀ   (P × P matrix)
 
-```
-Feature matrix F:          Gram matrix G:
-┌─────────────────┐        ┌─────────────────┐
-│ f1  f2  f3  f4  │        │ f1·f1  f1·f2 ...│
-│ │   │   │   │   │   →    │ f2·f1  f2·f2 ...│
-│ │   │   │   │   │        │ ...           │
-└─────────────────┘        └─────────────────┘
+G[i,j] = cos_sim(patch_i, patch_j)
+       = <xᵢ, xⱼ>  (vì đã L2-normalized)
 ```
 
-### Tại sao Gram Anchoring ổn định training?
+**Trực quan**:
+```
+Feature matrix X:              Gram matrix G:
+┌─────────────────┐           ┌─────────────────┐
+│ patch1 features │           │ 1.0  0.8  0.3 ..│  ← patch1 sim với tất cả
+│ patch2 features │    →      │ 0.8  1.0  0.5 ..│  ← patch2 sim với tất cả
+│ patch3 features │           │ 0.3  0.5  1.0 ..│
+│ ...             │           │ ...             │
+└─────────────────┘           └─────────────────┘
+    P × d                          P × P
+                              (pairwise similarities)
+```
 
-**Vấn đề**: Model lớn → features thay đổi nhanh → correlation thay đổi nhanh → unstable
-
-**Giải pháp**: Enforce G_student ≈ G_teacher
+### Gram Anchoring Loss
 
 ```
-L_Gram = ||G_student - G_teacher||²
+X_S = Student patch features (P × d, L2-normalized)
+X_G = Gram teacher patch features (P × d, L2-normalized)
+
+L_Gram = ||X_S · X_Sᵀ - X_G · X_Gᵀ||²_F
+
+       = ||G_student - G_anchor||²_F
 ```
 
-Giữ cấu trúc correlation ổn định, features không "chạy lung tung".
+**Gram Teacher**: Checkpoint từ **200k iterations** (khi dense features tốt nhất)
+
+### Tại sao Gram Anchoring hoạt động?
+
+**Key Insight**: Constrain **similarity structure**, NOT specific values!
+
+```
+┌───────────────────────────────────────────────────────────┐
+│  What Gram Loss ALLOWS:                                    │
+│  • Feature rotation                                        │
+│  • Feature scaling                                         │
+│  • Feature translation                                     │
+│                                                            │
+│  What Gram Loss PRESERVES:                                 │
+│  • Pairwise similarities                                   │
+│  • Relative geometry                                       │
+│  • "patch_eye similar to patch_ear more than patch_sky"   │
+└───────────────────────────────────────────────────────────┘
+```
+
+### High-Resolution Gram (L_HRef)
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│                    HIGH-RES GRAM                             │
+├─────────────────────────────────────────────────────────────┤
+│                                                              │
+│  Input: 224×224                Input: 448×448 (2×)          │
+│       ↓                             ↓                        │
+│  Student ViT                   Gram Teacher ViT              │
+│       ↓                             ↓                        │
+│  14×14 feature map            28×28 feature map             │
+│       ↓                             ↓                        │
+│       │                      Bicubic downsample             │
+│       │                             ↓                        │
+│       │                       14×14 feature map             │
+│       │                             │                        │
+│       └─────── L_Gram Loss ─────────┘                       │
+│                                                              │
+└─────────────────────────────────────────────────────────────┘
+
+Gain: +2 mIoU on ADE20k (high-res details!)
+```
+
+### Refinement Loss
+
+```
+L_Ref = w_D × L_DINO + L_iBOT + w_DK × L_DKoleo + w_Gram × L_Gram
+
+w_Gram = 2.0
+```
 
 ### Ablation
 
-| Setting | Kết quả |
-|---------|---------|
-| Without Gram Anchoring | Diverge at ~5K steps |
-| With Gram Anchoring | Stable to 1M+ steps |
+| Setting | ADE20k mIoU | Status |
+|---------|-------------|--------|
+| Without Gram Anchoring | Peaks at 200k, then **degrades** | ✗ |
+| With Gram Anchoring | **Stable improvement** to 1M+ steps | ✓ |
+| + High-Res Gram | **+2 mIoU** additional | ✓✓ |
+
+**Effect is almost immediate**: Improvements within 10k iterations!
 
 ## 4.3 Text Alignment vs CLIP
 
-### So sánh hai approaches
+### So sánh chi tiết
 
 | Aspect | CLIP | DINOv3 |
 |--------|------|--------|
-| Training | Joint (vision+text cùng lúc) | Decoupled (vision trước, text sau) |
-| Data | 400M image-text pairs | Images only, text optional |
-| Vision bias | Bias về text | Pure visual |
-| Khi thêm text | — | Không làm hỏng vision |
+| **Vision encoder** | Trained jointly with text | **FROZEN** (pretrained DINO) |
+| **What's trained** | Both encoders | Text encoder + 2 adapter layers |
+| **Features used** | CLS only | **CLS + mean-pooled patches** |
+| **Dense capability** | Poor | **Excellent** |
+| **Data needed** | 400M image-text pairs | Images only, text optional |
+| **Vision bias** | Biased toward text | Pure visual |
 
-### DINOv3 Strategy
+### DINOv3 Two-Phase Strategy
 
 ```
-Phase 1: Train vision encoder (DINO)
-              ↓
-Phase 2: Freeze vision, train text alignment
-              ↓
-         Shared embedding space
+┌─────────────────────────────────────────────────────────────┐
+│                   DECOUPLED TRAINING                         │
+├─────────────────────────────────────────────────────────────┤
+│                                                              │
+│  Phase 1: Pure Visual Learning                               │
+│  ┌─────────────┐                                             │
+│  │ DINO + iBOT │  ← No text, no language bias               │
+│  │ + KoLeo     │  ← Pure visual understanding                │
+│  │ + Gram      │                                             │
+│  └─────────────┘                                             │
+│         ↓                                                    │
+│         ↓  FREEZE vision encoder                            │
+│         ↓                                                    │
+│  Phase 2: Text Alignment                                     │
+│  ┌─────────────────────────────────────────────────────┐    │
+│  │  Frozen DINO ViT → CLS + patch_mean → Adapter →     │    │
+│  │                                           ↓          │    │
+│  │  Text Encoder → Text embed → Contrastive Loss       │    │
+│  └─────────────────────────────────────────────────────┘    │
+│                                                              │
+│  "Learn to see first, learn to talk later"                  │
+│                                                              │
+└─────────────────────────────────────────────────────────────┘
 ```
 
 **Ưu điểm**:
-- Vision features học pure visual understanding
-- Thêm text không ảnh hưởng vision performance
-- "Learn to see first, learn to talk later"
+- Vision features = **pure visual understanding**
+- Thêm text **không làm hỏng** vision performance
+- Dense features **preserved** (CLIP loses them)
 
-## 4.4 When Does Scaling Help?
+## 4.4 ViT-7B Architecture
 
-### Kết quả
+### So sánh với DINOv2
 
-| Benchmark | v2 | v3 | Δ |
-|-----------|-----|-----|-----|
-| ImageNet | 86.5% | 88.4% | +1.9 |
-| ADE20k | 49.0 | 55.9 | **+6.9** |
-| DAVIS | 76.6 | 83.3 | **+6.7** |
+| | DINOv2 (ViT-g) | DINOv3 (ViT-7B) |
+|---|----------------|-----------------|
+| **Parameters** | 1.1B | **6.7B** |
+| **Patch size** | 14 | **16** |
+| **Position embed** | Learnable | **Axial RoPE** |
+| **Embed dimension** | 1536 | **4096** |
+| **Blocks** | 40 | **48** |
+| **FFN** | SwiGLU | SwiGLU |
+| **Prototypes (DINO)** | 128k | **256k** |
+| **Prototypes (iBOT)** | 128k | **96k** |
 
-### Key Insight
+### Axial RoPE (Rotary Position Embedding)
 
-**Dense tasks được lợi nhiều nhất từ scaling!**
+```
+Standard positional embedding:    Axial RoPE:
+┌─────────────────────────┐      ┌─────────────────────────┐
+│ Learned 2D grid         │      │ Factorized: row × col   │
+│ Fixed resolution        │  →   │ Extrapolates to any res │
+│ Doesn't generalize      │      │ Rotation-based          │
+└─────────────────────────┘      └─────────────────────────┘
+```
 
-- Classification: Gần bão hòa (88% → khó tăng thêm)
-- Segmentation: Cần hiểu từng pixel → scale giúp nhiều
-- Video: Temporal understanding → scale giúp nhiều
+**Ưu điểm**: Generalizes to higher resolutions without retraining!
+
+## 4.5 Training Details
+
+### Hardware & Compute
+
+| Resource | Value |
+|----------|-------|
+| GPUs | **256 × H100** |
+| GPU Hours | **61,440** |
+| CO2 Emission | ~18 tCO2eq |
+| Training time | ~10 days |
+
+### Hyperparameters
+
+| Parameter | Value |
+|-----------|-------|
+| Learning rate | **0.0004** (constant, no cosine) |
+| Batch size | **4096** images |
+| Crops per image | 2 global + 8 local |
+| Total crops | 40,960 crops/step |
+
+### Dataset: LVD-1689M
+
+```
+Source: 17B Instagram images
+    ↓  Safety + dedup + curation
+LVD-1689M (×12 larger than v2)
+```
+
+| Dataset | Size | Source |
+|---------|------|--------|
+| LVD-142M (v2) | 142M | Web crawl |
+| **LVD-1689M (v3)** | **1.69B** | **Instagram** |
+
+## 4.6 Kết Quả DINOv3
+
+### So sánh với DINOv2
+
+| Benchmark | DINOv2 (ViT-g) | DINOv3 (ViT-7B) | Δ |
+|-----------|----------------|-----------------|-----|
+| ImageNet Linear | 86.5% | **88.4%** | +1.9 |
+| ADE20k mIoU (linear) | 49.0 | **55.9** | **+6.9** |
+| ADE20k mIoU (full) | 60.2 | **63.0** | +2.8 |
+| COCO Detection mAP | 62.5 | **66.1** | +3.6 |
+| DAVIS Tracking J&F | 76.6 | **83.3** | **+6.7** |
+| ObjectNet | 66.0 | **79.0** | **+13.0** |
+
+### Key Insight: Scaling Benefits Dense Tasks Most
+
+```
+┌────────────────────────────────────────────────────────────┐
+│              WHERE SCALING HELPS MOST                       │
+├────────────────────────────────────────────────────────────┤
+│                                                             │
+│  Task           v2 → v3    Improvement                     │
+│  ─────────────────────────────────────────                 │
+│  Classification  86.5 → 88.4   +1.9%  ← Near saturation   │
+│  Segmentation    49.0 → 55.9   +6.9   ← BIG GAIN          │
+│  Video Tracking  76.6 → 83.3   +6.7   ← BIG GAIN          │
+│  ObjectNet       66.0 → 79.0   +13.0  ← HUGE GAIN         │
+│                                                             │
+└────────────────────────────────────────────────────────────┘
+```
+
+**Tại sao?**
+- **Classification**: Gần bão hòa (88% → khó tăng thêm)
+- **Segmentation**: Cần hiểu từng pixel → scale giúp nhiều
+- **Video/Tracking**: Temporal understanding → scale giúp nhiều
+- **ObjectNet**: Out-of-distribution → cần representations tốt hơn
+
+### DINOv3 = First SSL at Weakly-Supervised Parity
+
+```
+ImageNet Accuracy:
+┌────────────────────────────────────────────────┐
+│                                                 │
+│  Supervised (labels):           85.7%          │
+│  Weakly-supervised (hashtags):  88.5%          │
+│  DINOv3 (NO labels):           88.4%  ← WOW!  │
+│                                                 │
+└────────────────────────────────────────────────┘
+```
 
 ### Hướng đi tương lai
 
-Không cần scale classification nữa. Focus vào:
+**Không cần scale classification nữa**. Focus vào:
 - Dense prediction (segmentation, depth)
 - Video understanding
 - 3D vision
-- Multimodal
+- Multimodal (with preserved dense features)
 
 ---
 
@@ -707,13 +1141,20 @@ Không cần scale classification nữa. Focus vào:
 |----------|---------|
 | θ_T, θ_S | Parameters của Teacher, Student |
 | P_t, P_s | Output probability của Teacher, Student |
-| τ | Temperature |
-| λ | EMA coefficient |
-| K | Số prototypes (65,536 trong DINO) |
-| d | Dimension (768 trong ViT-B) |
+| τ | Temperature (τ_t=0.04, τ_s=0.1) |
+| λ | EMA coefficient (0.996 → 1.0) |
+| K | Số prototypes (65,536 trong v1, 256k trong v3) |
+| d | Dimension (768 trong ViT-B, 4096 trong ViT-7B) |
 | Q, K, V | Query, Key, Value trong attention |
-| G | Gram matrix |
+| G | Gram matrix (G = X·Xᵀ) |
 | L | Loss function |
+| c | Centering vector (running mean) |
+| m | Centering momentum (0.9) |
+| M | Set of masked patch indices (iBOT) |
+| d_{n,i} | Distance to nearest neighbor (KoLeo) |
+| X_S, X_G | Student/Gram teacher features |
+| P | Number of patches |
+| B | Batch size |
 
 ## C. Further Reading
 

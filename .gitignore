@@ -15,3 +15,26 @@ Thumbs.db
 # Temporary files
 *.tmp
 *.log
+
+# Environment secrets
+.env
+
+# PDF papers (large binaries)
+*.pdf
+
+# Generated/extracted content
+extracted_images/
+generated_images/
+DINO_Evolution_v1_to_v3/
+
+# Old versions (superseded)
+dino_v6[0-4].js
+dino_v65.js
+dino_v66.js
+dino_v67.js
+slide_outline_v6[0-4].md
+slide_outline_v65.md
+slide_outline_v67.md
+dino-v1-paper.md
+extract_illustrations.js
+image_prompts.md
