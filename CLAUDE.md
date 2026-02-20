@@ -6,44 +6,70 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 PowerPoint presentation generator for a Vietnamese university seminar about DINO (self-DIstillation with NO labels) - a self-supervised vision learning paper series (v1 2021, v2 2023, v3 2025). Uses Node.js with `pptxgenjs` library.
 
-**Target audience**: CS students với ML cơ bản (biết neural network, loss, gradient descent)
+**Target audience**: Master's students with ML background (neural networks, loss, gradient descent, optimization)
+**Duration**: 30 minutes (~24 slides)
+**Language**: Vietnamese
 
 ## Commands
 
 ```bash
-# Install dependency
-npm install pptxgenjs
+# Install dependencies
+npm install
 
-# Generate presentation (latest version)
-node dino_v63.js
+# Generate full presentation
+node dino_v68.js
+
+# Generate slide images (requires Gemini API key in .env)
+node generate_image.js [slide_number]
 ```
 
-Output: `DINO_Seminar_v6.3.pptx`
+Output: `DINO_Seminar_v68.pptx`
 
 ## Content Workflow
 
 ```
-DINO_Foundation.md      →    content_extraction.md    →    dino_v63.js
-(Reference document)         (Slide outline)               (Presentation code)
-        ↓
-Vietnamese_Glossary.md
-(Terms handout)
+DINO_Foundation.md      →    slide_outline_v69.md    →    dino_v68.js
+(Reference document)         (Slide outline)              (Presentation code)
+        ↓                            ↓
+Vietnamese_Glossary.md       image_prompts_v68.md
+(Terms handout)              (Image generation prompts)
 ```
 
 ### Key Files
 
 | File | Purpose |
 |------|---------|
-| `DINO_Foundation.md` | Comprehensive reference (~5000 từ), examples-first approach |
+| `DINO_Foundation.md` | Comprehensive reference with full formulas from papers |
+| `slide_outline_v69.md` | Current slide outline (24 slides, Vietnamese) |
+| `dino_v68.js` | PowerPoint generator (Vietnamese) |
+| `generate_image.js` | Gemini/Imagen API image generator |
+| `image_prompts_v68.md` | Image prompts for key slides |
 | `Vietnamese_Glossary.md` | 30+ technical terms, printable handout |
-| `content_extraction.md` | Slide content outline with notes |
-| `dino_v63.js` | Presentation generator (balanced v1/v2/v3) |
+
+## Current Version: v68/v69 (Master's Class)
+
+**Structure: 24 slides, 30 minutes**
+
+| Section | Slides | Content |
+|---------|--------|---------|
+| 1. Hook & Problem | 2 | Attention demo, labeled data cost |
+| 2. DINOv1 Core | 10 | Architecture, loss, EMA, centering, sharpening, multi-crop |
+| 3. Evolution to v2 | 6 | Data curation, iBOT, KoLeo, three losses |
+| 4. Evolution to v3 | 4 | Dense degradation, Gram anchoring, text alignment |
+| 5. Synthesis | 2 | Timeline, takeaways |
+
+**Math depth**: Full derivations from papers
+- Loss: `L = -Σ_k P_t(x)[k] · log P_s(x')[k]` with P_s, P_t formulas
+- EMA: `θ_t ← λθ_t + (1-λ)θ_s`, cosine schedule `λ(t) = 1 - (1-λ_base)×(1+cos(πt/T))/2`
+- Centering: `c ← m·c + (1-m)·(1/B)Σg_θt(xi)`
+- KoLeo: `L = -(1/n) Σᵢ log(min_{j≠i} ||xi - xj||)`
+- Gram: `L_Gram = ||X_S·X_S^T - X_G·X_G^T||²_F`
 
 ## Architecture
 
-Single-file structure (`dino_v63.js`):
+Single-file structure (`dino_v68.js`):
 
-1. **Design System Constants** (lines 1-30)
+1. **Design System Constants**
    - `C`: Color palette (green/red/cream/gray theme)
    - `FONT`, `FONT_TITLE`: Roboto
    - `W`, `H`, `M`, `CW`: Layout dimensions for LAYOUT_WIDE (13.33 x 7.5)
@@ -59,18 +85,6 @@ Single-file structure (`dino_v63.js`):
 
 3. **Slides**: Each slide in its own IIFE `(() => { ... })()`
 
-## Five Presentation Sections (v6.3)
-
-| Section | Slides | Content |
-|---------|--------|---------|
-| 1. Vấn đề | 2 | Chi phí gán nhãn, SSL intro |
-| 2. DINOv1 | 9 | Core insight, architecture, EMA, multi-crop, collapse |
-| 3. DINOv2 | 9 | LVD-142M, 3 losses, iBOT, KoLeo, Register tokens |
-| 4. DINOv3 | 8 | Gram Anchoring, Text Alignment, Scaling analysis |
-| 5. Tổng hợp | 4 | Comparison, evolution, applications |
-
-**Balance**: v1, v2, v3 có độ sâu tương đương (8-9 slides mỗi section)
-
 ## Coding Conventions
 
 - Use design system constants (`C.green`, `FONT`, `M`, `CW`) - never hardcode colors/dimensions
@@ -83,62 +97,51 @@ Single-file structure (`dino_v63.js`):
 
 ## Content Guidelines
 
-### Examples First, Theory Second
+### For Master's Class (Rigorous)
 
-For each major concept:
-1. Show visual example/demo
-2. Create curiosity ("How does this work?")
-3. Explain mechanism with analogy
-4. Show math (simplified, if needed)
-5. Connect to big picture
-
-### Math Simplification
-
-| Complex | Simplified |
-|---------|------------|
-| `Attention(Q,K,V) = softmax(QK^T/√d)V` | "weight = similarity(question, answer)" |
-| `θ_T ← λθ_T + (1-λ)θ_S` | "Teacher = 99.6% cũ + 0.4% mới" |
-| `G = FF^T` | "Ma trận đo feature nào tương quan" |
+1. Show visual example first (create curiosity)
+2. Present full mathematical derivation
+3. Explain intuition behind each term
+4. Connect to prior/next concepts
+5. Include ablation results where relevant
 
 ### Technical Terms
 
-All terms must be defined in `Vietnamese_Glossary.md` before use. Common terms:
+All terms defined in `Vietnamese_Glossary.md`. Key terms:
 - CLS token → Token phân loại
 - Linear probe → Đầu tuyến tính
-- Collapse → Sụp đổ
-- mIoU → (giữ nguyên, giải thích "đo chất lượng segmentation")
+- Collapse → Sụp đổ (Mode collapse vs Uniform collapse)
+- mIoU → (giữ nguyên, giải thích ý nghĩa)
 
-## Slide Templates
+## Future: Per-Slide Generation
 
-### Content Slide
+For more control over individual slides, can generate slides one-by-one:
+
 ```javascript
-(() => {
-  const s = pres.addSlide();
-  s.background = { color: C.bg };
-  addTitle(s, "Slide Title");
-  addProgress(s, SECTION_NUMBER);
-
-  // Content here
-
-  addSource(s, "Citation");
-  s.addNotes(`Vietnamese speaker notes here`);
-})();
+// Generate single slide to separate file
+function generateSlide(slideNum) {
+  const pres = new pptxgen();
+  // ... add single slide
+  pres.writeFile({ fileName: `slide_${slideNum.toString().padStart(2, '0')}.pptx` });
+}
 ```
 
-### Summary Slide (cream background)
-```javascript
-(() => {
-  const s = pres.addSlide();
-  s.background = { color: C.cream };
-  s.addText("Section — tóm tắt", { /* title style */ });
-  // Bullet points
-})();
-```
+This allows:
+- Iterating on individual slides
+- A/B testing different versions
+- Easier review process
 
 ## Version History
 
-| Version | Changes |
-|---------|---------|
-| v6.1 | Initial 6-section structure |
-| v6.2 | Removed ViT section, 5 sections |
-| v6.3 | Balanced v1/v2/v3 depth, added KoLeo/Register/Gram slides |
+| Version | Target | Slides | Duration | Changes |
+|---------|--------|--------|----------|---------|
+| v6.3 | Undergrad | 32 | 40 min | Balanced v1/v2/v3, examples-first |
+| v68 | Master's | 24 | 30 min | Full math derivations, Vietnamese |
+| v69 | Master's | 24 | 30 min | Refined outline, same structure |
+
+## Environment Setup
+
+```bash
+# .env file (not committed)
+gemini-key=YOUR_GEMINI_API_KEY
+```
