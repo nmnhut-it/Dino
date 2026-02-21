@@ -31,6 +31,10 @@ generated_images/
 DINO_Evolution_v1_to_v3/
 output/
 
+# Saved web pages
+*.html
+*_files/
+
 # Old versions (superseded)
 dino_v6[0-4].js
 dino_v65.js

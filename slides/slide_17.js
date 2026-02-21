@@ -1,75 +1,126 @@
 /**
- * Slide 17: DINOv2 Results
+ * Slide 17: Takeaways
  */
 
 const {
   C, FONT, M, CW,
-  addTitle, addProgress
-, SHAPES } = require('./config');
+  addTitle, addProgress, SHAPES
+} = require('./config');
 
 function create(pres) {
   const s = pres.addSlide();
   s.background = { color: C.bg };
 
-  addTitle(s, "Kết Quả DINOv2", C.v2);
+  addTitle(s, "Key Takeaways", C.green);
 
-  // Big numbers
-  const results = [
-    { num: "86.5%", task: "ImageNet", prev: "82.3%" },
-    { num: "49.0", task: "ADE20k mIoU", prev: "44.6" },
-    { num: "+41%", task: "Retrieval vs SSL", prev: "" },
+  // Takeaway boxes
+  const takeaways = [
+    {
+      num: "1",
+      title: "Self-Distillation Works",
+      detail: "Teacher-Student + EMA = stable SSL without labels",
+      color: C.v1,
+    },
+    {
+      num: "2",
+      title: "Quality > Quantity",
+      detail: "142M curated > 1.2B uncurated",
+      color: C.v2,
+    },
+    {
+      num: "3",
+      title: "Multiple Objectives",
+      detail: "DINO + iBOT + KoLeo = foundation model",
+      color: C.v2,
+    },
+    {
+      num: "4",
+      title: "Scaling Needs Care",
+      detail: "Gram Anchoring prevents dense degradation",
+      color: C.v3,
+    },
   ];
 
-  results.forEach((r, i) => {
-    const x = M + i * 4;
+  takeaways.forEach((t, i) => {
+    const y = 1.3 + i * 1.3;
 
-    s.addText(r.num, {
-      x, y: 1.6, w: 3.5, h: 0.9,
-      fontFace: FONT, fontSize: 48, bold: true, color: C.v2,
+    // Number circle
+    s.addShape(SHAPES.OVAL, {
+      x: M, y: y + 0.15, w: 0.6, h: 0.6,
+      fill: { color: t.color },
+    });
+    s.addText(t.num, {
+      x: M, y: y + 0.15, w: 0.6, h: 0.6,
+      fontFace: FONT, fontSize: 20, bold: true, color: "FFFFFF", align: "center", valign: "middle",
     });
 
-    s.addText(r.task, {
-      x, y: 2.5, w: 3.5, h: 0.5,
-      fontFace: FONT, fontSize: 16, color: C.gray,
+    // Title
+    s.addText(t.title, {
+      x: M + 0.8, y, w: 6, h: 0.55,
+      fontFace: FONT, fontSize: 24, bold: true, color: t.color,
+    });
+
+    // Detail
+    s.addText(t.detail, {
+      x: M + 0.8, y: y + 0.55, w: 11, h: 0.45,
+      fontFace: FONT, fontSize: 18, color: C.gray,
     });
   });
 
-  // Foundation Model box
+  // Bottom: Call to action
   s.addShape(SHAPES.RECTANGLE, {
-    x: M, y: 3.5, w: CW, h: 1.3,
-    fill: { color: "FFF3E0" },
-    line: { color: C.v2, pt: 2 },
+    x: M, y: 5.9, w: CW, h: 1.0,
+    fill: { color: C.cream },
+    line: { color: C.green, pt: 2 },
   });
 
-  s.addText("Foundation Model thực sự:", {
-    x: M + 0.2, y: 3.7, w: CW - 0.4, h: 0.4,
-    fontFace: FONT, fontSize: 20, bold: true, color: C.v2,
+  s.addText("DINO = Foundation Model cho Vision", {
+    x: M + 0.3, y: 6.0, w: CW - 0.6, h: 0.5,
+    fontFace: FONT, fontSize: 26, bold: true, color: C.green, align: "center",
   });
 
-  s.addText("1 backbone FROZEN + linear head → SOTA nhiều tasks", {
-    x: M + 0.2, y: 4.1, w: CW - 0.4, h: 0.5,
-    fontFace: FONT, fontSize: 20, color: C.black,
+  s.addText("1 backbone, mọi task, không cần labels", {
+    x: M + 0.3, y: 6.5, w: CW - 0.6, h: 0.4,
+    fontFace: FONT, fontSize: 18, color: C.gray, align: "center",
   });
 
-  // vs CLIP
-  s.addText("Thắng OpenCLIP mà KHÔNG cần text!", {
-    x: M, y: 5.3, w: CW, h: 0.5,
-    fontFace: FONT, fontSize: 22, bold: true, color: C.accent, align: "center",
-  });
+  addProgress(s, 5);
 
-  addProgress(s, 3);
+  s.addNotes(`4 takeaways chính từ DINO series:
+[pause]
 
-  s.addNotes(`DINOv2 đạt Foundation Model status:
+1. SELF-DISTILLATION WORKS
+Teacher-Student với EMA tạo ra stable SSL.
+Không cần negative samples, không cần contrastive loss.
+Key: 2 networks update khác tốc độ → không collapse.
+[pause]
 
-Results:
-- 86.5% ImageNet (từ 82.3%)
-- 49.0 mIoU ADE20k (từ 44.6)
-- +41% retrieval vs prior SSL
+2. QUALITY > QUANTITY
+Data curation quan trọng hơn data quantity.
+142M curated thắng 1.2B uncurated.
+Bài học: đừng chỉ crawl nhiều, hãy lọc kỹ.
+[pause]
 
-1 backbone, FROZEN, chỉ thêm linear head → SOTA.
+3. MULTIPLE OBJECTIVES
+Muốn làm foundation model → cần nhiều losses.
+DINO (global) + iBOT (local) + KoLeo (diversity).
+Mỗi loss lo một task, kết hợp = comprehensive.
+[pause]
 
-Thắng OpenCLIP dù không dùng text!
-Pure visual SSL với đúng losses và data = đủ mạnh.`);
+4. SCALING NEEDS CARE
+Scale không free — cần techniques như Gram Anchoring.
+Dense features dễ degrade khi model lớn.
+Bài học: monitor các metrics khác nhau, không chỉ classification.
+[pause]
+
+Tổng kết:
+DINO = Foundation Model cho Vision.
+1 backbone frozen + linear head = SOTA nhiều tasks.
+Không cần labels ở bất kỳ dạng nào.
+[pause]
+
+Cảm ơn các bạn đã lắng nghe!
+Có câu hỏi gì không?`);
 
   return s;
 }

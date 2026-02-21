@@ -1,75 +1,129 @@
 /**
- * Slide 16: Three Losses Summary
+ * Slide 16: Results Summary - v1 → v2 → v3 Evolution
  */
 
 const {
   C, FONT, M, CW,
-  addTitle, addProgress
-, SHAPES } = require('./config');
+  addTitle, addProgress, SHAPES
+} = require('./config');
 
 function create(pres) {
   const s = pres.addSlide();
   s.background = { color: C.bg };
 
-  addTitle(s, "3 Losses = 3 Việc", C.v2);
+  addTitle(s, "Kết Quả: v1 → v2 → v3", C.green);
 
-  // Three boxes
-  const losses = [
-    { name: "DINO", what: "CLS token", task: "Classification", color: C.v1 },
-    { name: "iBOT", what: "Patches", task: "Segmentation", color: C.v2 },
-    { name: "KoLeo", what: "Diversity", task: "Retrieval", color: C.success },
+  // Evolution bars - Classification
+  s.addText("Classification (ImageNet)", {
+    x: M, y: 1.3, w: CW, h: 0.5,
+    fontFace: FONT, fontSize: 20, bold: true, color: C.gray,
+  });
+
+  const classResults = [
+    { ver: "v1", score: "80.1%", w: 8.0, color: C.v1 },
+    { ver: "v2", score: "86.5%", w: 8.65, color: C.v2 },
+    { ver: "v3", score: "88.4%", w: 8.84, color: C.v3 },
   ];
 
-  losses.forEach((loss, i) => {
-    const x = M + i * 4;
+  classResults.forEach((r, i) => {
+    const y = 1.75 + i * 0.65;
 
+    // Version label
+    s.addText(r.ver, {
+      x: M, y, w: 0.8, h: 0.55,
+      fontFace: FONT, fontSize: 18, bold: true, color: r.color,
+    });
+
+    // Bar
     s.addShape(SHAPES.RECTANGLE, {
-      x, y: 1.6, w: 3.6, h: 3,
-      fill: { color: C.bg },
-      line: { color: loss.color, pt: 3 },
+      x: M + 0.9, y: y + 0.1, w: r.w, h: 0.4,
+      fill: { color: r.color },
     });
 
-    s.addText(loss.name, {
-      x: x + 0.1, y: 1.8, w: 3.4, h: 0.6,
-      fontFace: FONT, fontSize: 28, bold: true, color: loss.color, align: "center",
-    });
-
-    s.addText(loss.what, {
-      x: x + 0.1, y: 2.6, w: 3.4, h: 0.5,
-      fontFace: FONT, fontSize: 18, color: C.gray, align: "center",
-    });
-
-    s.addText("↓", {
-      x: x + 0.1, y: 3.1, w: 3.4, h: 0.4,
-      fontFace: FONT, fontSize: 24, color: C.medGray, align: "center",
-    });
-
-    s.addText(loss.task, {
-      x: x + 0.1, y: 3.5, w: 3.4, h: 0.5,
-      fontFace: FONT, fontSize: 18, bold: true, color: C.black, align: "center",
+    // Score
+    s.addText(r.score, {
+      x: M + 1 + r.w, y, w: 1.5, h: 0.55,
+      fontFace: FONT, fontSize: 18, bold: true, color: r.color,
     });
   });
 
-  // Combined result
-  s.addText("Kết hợp: Global + Local + Diverse = Foundation Model", {
-    x: M, y: 5.2, w: CW, h: 0.6,
-    fontFace: FONT, fontSize: 22, bold: true, color: C.v2, align: "center",
+  // Evolution bars - Dense (Segmentation)
+  s.addText("Dense Tasks (ADE20k mIoU)", {
+    x: M, y: 3.8, w: CW, h: 0.5,
+    fontFace: FONT, fontSize: 20, bold: true, color: C.gray,
   });
 
-  addProgress(s, 3);
+  const denseResults = [
+    { ver: "v1", score: "—", w: 0, color: C.v1 },
+    { ver: "v2", score: "49.0", w: 4.9, color: C.v2 },
+    { ver: "v3", score: "55.9", w: 5.59, color: C.v3 },
+  ];
 
-  s.addNotes(`3 losses, mỗi cái lo một việc:
+  denseResults.forEach((r, i) => {
+    const y = 4.3 + i * 0.65;
 
-DINO: học CLS token → classification
-iBOT: học patches → segmentation, depth
-KoLeo: đẩy diverse → retrieval
+    s.addText(r.ver, {
+      x: M, y, w: 0.8, h: 0.55,
+      fontFace: FONT, fontSize: 18, bold: true, color: r.color,
+    });
 
-Kết hợp = comprehensive learning:
-- Global understanding (DINO)
-- Local understanding (iBOT)
-- Diversity (KoLeo)
+    if (r.w > 0) {
+      s.addShape(SHAPES.RECTANGLE, {
+        x: M + 0.9, y: y + 0.1, w: r.w, h: 0.4,
+        fill: { color: r.color },
+      });
+    }
 
-→ Foundation Model: 1 backbone cho mọi task.`);
+    s.addText(r.score, {
+      x: r.w > 0 ? M + 1 + r.w : M + 0.9, y, w: 1.5, h: 0.55,
+      fontFace: FONT, fontSize: 18, bold: true, color: r.color,
+    });
+  });
+
+  // Key achievements box
+  s.addShape(SHAPES.RECTANGLE, {
+    x: M, y: 6.0, w: CW, h: 0.9,
+    fill: { color: "E8F5E9" },
+    line: { color: C.success, pt: 2 },
+  });
+
+  s.addText("v3: SSL ĐẦU TIÊN ngang weakly-supervised  •  SOTA với FROZEN backbone  •  7B params", {
+    x: M + 0.3, y: 6.15, w: CW - 0.6, h: 0.6,
+    fontFace: FONT, fontSize: 18, bold: true, color: C.success, align: "center",
+  });
+
+  addProgress(s, 5);
+
+  s.addNotes(`Đây là slide tổng hợp kết quả qua 3 versions.
+[pause]
+
+CLASSIFICATION (ImageNet):
+- v1: 80.1% — đã vượt supervised với 0 labels
+- v2: 86.5% — tăng 6.4%, vượt OpenCLIP dù không dùng text
+- v3: 88.4% — tăng thêm 1.9%, ngang weakly-supervised
+[pause]
+
+DENSE TASKS (ADE20k segmentation):
+- v1: không có số này — v1 chỉ focus classification
+- v2: 49.0 mIoU — lần đầu test dense với frozen backbone
+- v3: 55.9 mIoU — tăng 6.9, nhờ Gram Anchoring
+[pause]
+
+Để ý: Dense tăng NHIỀU HƠN classification (6.9 vs 1.9).
+Gram Anchoring đặc biệt hiệu quả cho dense tasks.
+[pause]
+
+Thành tựu lịch sử của v3:
+- SSL ĐẦU TIÊN đạt ngang weakly-supervised (Instagram hashtags)
+- SOTA trên COCO, ADE20k với FROZEN backbone
+- Scale 7B params mà không degrade
+[pause]
+
+Đây là lý do DINO được gọi là "foundation model cho vision".
+1 backbone cho mọi task, không cần fine-tune.
+[pause]
+
+Slide cuối: key takeaways cho audience.`);
 
   return s;
 }

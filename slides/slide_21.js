@@ -60,18 +60,42 @@ function create(pres) {
 
   addProgress(s, 4);
 
-  s.addNotes(`DINOv3 đạt kết quả ấn tượng:
+  s.addNotes(`Gram Anchoring giải quyết vấn đề dense degradation — kết quả thế nào?
+[pause]
 
-- 88.4% ImageNet (từ 86.5%)
-- 55.9 mIoU ADE20k (từ 49.0)
-- 7B parameters
+88.4% ImageNet — tăng 1.9% so với v2 (86.5%).
+Con số tưởng nhỏ, nhưng ở mức này, 1% là rất khó.
+Từ 86% lên 88% khó hơn nhiều từ 70% lên 75%.
+[pause]
 
-Thành tựu lịch sử:
-- SSL đầu tiên ngang weakly-supervised trên ImageNet
-- SOTA COCO detection với frozen backbone
-- SOTA ADE20k segmentation với frozen backbone
+Nhưng số ẤN TƯỢNG NHẤT là dense tasks:
+55.9 mIoU ADE20k — tăng 6.9 so với v2 (49.0)!
+Dense tasks được lợi NHIỀU NHẤT từ scaling.
+[pause]
 
-Gram Anchoring giải quyết dense feature degradation.`);
+Tại sao dense tăng nhiều hơn classification?
+- Classification: model lớn hơn, đã gần saturate (~88%)
+- Dense: cần spatial understanding — đây là thế mạnh của larger models
+- Gram Anchoring giữ được dense quality khi scale
+[pause]
+
+Thành tựu lịch sử — các bạn nghe kỹ nhé:
+SSL ĐẦU TIÊN ngang weakly-supervised trên ImageNet.
+[pause]
+
+Weakly-supervised dùng HashTag từ Instagram — 1 tỷ ảnh với text.
+DINOv3 không dùng text nào, chỉ ảnh, mà bằng được.
+Đây là milestone của SSL: không cần labels DƯỚI BẤT KỲ HÌNH THỨC NÀO.
+[pause]
+
+7B parameters — scale này comparable với LLMs.
+Nhưng DINOv3 cho thấy visual SSL cũng scale được.
+Cùng scaling law như language models.
+[pause]
+
+SOTA COCO detection và ADE20k segmentation — cả hai với FROZEN backbone.
+Nghĩa là chỉ train detection/segmentation head, backbone giữ nguyên.
+Foundation model đích thực — 1 backbone cho mọi task.`);
 
   return s;
 }
