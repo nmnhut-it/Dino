@@ -19,6 +19,9 @@ Thumbs.db
 # Environment secrets
 .env
 
+# Claude Code plans
+.claude/
+
 # PDF papers (large binaries)
 *.pdf
 
@@ -26,6 +29,7 @@ Thumbs.db
 extracted_images/
 generated_images/
 DINO_Evolution_v1_to_v3/
+output/
 
 # Old versions (superseded)
 dino_v6[0-4].js
