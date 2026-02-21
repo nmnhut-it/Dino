@@ -1,68 +1,64 @@
 /**
- * Slide 2: The Goal - Bài toán cần giải
+ * Slide 2: DINO đạt được gì?
  */
 
 const {
   C, FONT, M, CW,
-  addTitle, addProgress, addTable, addBullets
-, SHAPES } = require('./config');
+  addTitle, addProgress
+} = require('./config');
 
 function create(pres) {
   const s = pres.addSlide();
   s.background = { color: C.bg };
 
-  addTitle(s, "Bài Toán: Dạy Máy Mà Không Cần Gán Nhãn");
+  addTitle(s, "DINO Đạt Được Gì?");
 
-  // So sánh
-  addTable(s,
-    ["", "Cách truyền thống", "Cái mình muốn"],
-    [
-      ["Dữ liệu", "14 triệu ảnh CÓ nhãn", "Tỉ ảnh KHÔNG nhãn"],
-      ["Chi phí", "500 nghìn đô + 2 năm", "Gần như 0 đồng"],
-      ["Giới hạn", "Phụ thuộc người gán", "Vô hạn (internet)"],
-    ],
-    M, 1.4, CW * 0.6
-  );
+  // 4 achievements - layout 2x2 đơn giản
+  const items = [
+    { num: "88.4%", desc: "ImageNet (không nhãn)" },
+    { num: "SOTA", desc: "Segmentation, Depth" },
+    { num: "6.7B", desc: "parameters (v3)" },
+    { num: "1st", desc: "SSL ≈ Weakly-supervised" },
+  ];
 
-  // Câu hỏi chính
-  s.addShape(SHAPES.RECTANGLE, {
-    x: M, y: 4.2, w: CW, h: 1.2,
-    fill: { color: C.cream },
-    line: { color: C.accent, pt: 2 },
-  });
-  s.addText("Liệu có thể train model GIỎI như có nhãn, mà KHÔNG CẦN nhãn?", {
-    x: M + 0.3, y: 4.35, w: CW - 0.6, h: 1,
-    fontFace: FONT, fontSize: 26, bold: true, color: C.accent,
-    align: "center", valign: "middle",
+  items.forEach((item, i) => {
+    const x = M + (i % 2) * 6.2;
+    const y = 1.5 + Math.floor(i / 2) * 2.5;
+
+    s.addText(item.num, {
+      x, y, w: 3, h: 1,
+      fontFace: FONT, fontSize: 48, bold: true, color: C.green,
+    });
+
+    s.addText(item.desc, {
+      x, y: y + 1, w: 5.5, h: 0.5,
+      fontFace: FONT, fontSize: 20, color: C.black,
+    });
   });
 
-  // Tại sao quan trọng
-  s.addText("Tại sao phải làm vậy?", {
-    x: M, y: 5.6, w: 3, h: 0.4,
-    fontFace: FONT, fontSize: 20, bold: true, color: C.black,
+  // Source
+  s.addText("Nguồn: DINOv3 (Siméoni et al., arXiv 2025)", {
+    x: M, y: 6.5, w: CW, h: 0.4,
+    fontFace: FONT, fontSize: 12, italic: true, color: C.medGray,
   });
-  addBullets(s, [
-    "Ảnh trên mạng: VÔ HẠN, miễn phí",
-    "Ảnh có nhãn: ĐẮT, chậm, có giới hạn",
-    "Giải được → scale lên vô tận",
-  ], M, 5.9, CW, 1.2, 18);
 
   addProgress(s, 1);
 
-  s.addNotes(`[VẤN ĐỀ CẦN GIẢI]
+  s.addNotes(`4 thành tựu chính của DINO:
 
-ImageNet - bộ dữ liệu nổi tiếng nhất - có 14 triệu ảnh.
-Gán nhãn tốn 500 nghìn đô, mất 2 năm.
+1. 88.4% ImageNet accuracy - không dùng nhãn
+   (DINOv3 với ViT-6.7B, linear probe)
 
-Đó là cái "nút cổ chai" lớn nhất của deep learning bây giờ.
+2. SOTA nhiều dense tasks: segmentation, depth estimation
+   Với frozen backbone, chỉ train linear head
 
-Trong khi đó, ảnh trên internet thì vô hạn. Facebook có hàng tỉ ảnh. Nhưng không có nhãn.
+3. Scale lên 6.7B parameters (DINOv3)
+   Lớn nhất cho self-supervised vision
 
-Câu hỏi đặt ra: Có cách nào train model mà không cần nhãn, nhưng vẫn giỏi như có nhãn không?
+4. Lần đầu SSL xấp xỉ weakly-supervised (88.5%)
+   Supervised chỉ đạt 85.7%
 
-Nếu làm được, mình có thể scale lên vô hạn - không còn phụ thuộc vào việc gán nhãn nữa.
-
-Đó chính là bài toán DINO giải quyết.`);
+Nguồn: Siméoni et al., arXiv 2025`);
 
   return s;
 }

@@ -1,87 +1,93 @@
 /**
- * Slide 12: DINOv1 Results
+ * Slide 12: Kết Quả v1 - DINOv1 Results
  */
 
 const {
-  C, FONT, M,
-  addTitle, addProgress, addTable, addBullets
+  C, FONT, M, CW,
+  addTitle, addProgress
 , SHAPES } = require('./config');
 
 function create(pres) {
   const s = pres.addSlide();
   s.background = { color: C.bg };
 
-  addTitle(s, "Kết Quả DINOv1 - Lần Đầu SSL Thắng Supervised", C.v1);
+  addTitle(s, "Kết Quả v1", C.v1);
 
-  // Bảng kết quả
-  addTable(s,
-    ["Phương pháp", "ImageNet", "Nhãn", "Năm"],
-    [
-      ["DINO v1", "80.1%", "0", "2021"],
-      ["Supervised ViT", "76.5%", "14M", "-"],
-      ["SimCLR", "69.3%", "0", "2020"],
-      ["BYOL", "74.3%", "0", "2020"],
-      ["MoCo v3", "76.7%", "0", "2021"],
-    ],
-    M, 1.3, 7
-  );
+  // Big number
+  s.addText("80.1%", {
+    x: M, y: 1.4, w: 4, h: 1.2,
+    fontFace: FONT, fontSize: 72, bold: true, color: C.v1,
+  });
+
+  s.addText("ImageNet (không nhãn)", {
+    x: M, y: 2.6, w: 4, h: 0.5,
+    fontFace: FONT, fontSize: 20, color: C.gray,
+  });
+
+  // Comparison
+  s.addShape(SHAPES.RECTANGLE, {
+    x: 5.5, y: 1.4, w: 7, h: 2,
+    fill: { color: C.cream },
+  });
+
+  s.addText("So sánh:", {
+    x: 5.7, y: 1.5, w: 6.6, h: 0.4,
+    fontFace: FONT, fontSize: 18, bold: true, color: C.black,
+  });
+
+  s.addText("• Supervised ViT: 76.5% (cần 14M nhãn)\n• SimCLR: 69.3%\n• BYOL: 74.3%", {
+    x: 5.7, y: 1.9, w: 6.6, h: 1.4,
+    fontFace: FONT, fontSize: 18, color: C.black,
+  });
 
   // Milestone
   s.addShape(SHAPES.RECTANGLE, {
-    x: M, y: 4.0, w: 7, h: 0.8,
+    x: M, y: 4.0, w: CW, h: 1,
     fill: { color: "E8F5E9" },
     line: { color: C.success, pt: 2 },
   });
-  s.addText("🎯 Lần ĐẦU TIÊN self-supervised VƯỢT supervised trên ImageNet!", {
-    x: M + 0.2, y: 4.1, w: 6.6, h: 0.7,
-    fontFace: FONT, fontSize: 20, bold: true, color: C.success, valign: "middle",
+
+  s.addText("Lần ĐẦU TIÊN: SSL vượt Supervised!", {
+    x: M + 0.2, y: 4.2, w: CW - 0.4, h: 0.6,
+    fontFace: FONT, fontSize: 24, bold: true, color: C.success, align: "center",
   });
 
-  // Hạn chế
-  s.addText("Nhưng còn hạn chế:", {
-    x: 8, y: 1.3, w: 4.8, h: 0.4,
-    fontFace: FONT, fontSize: 18, bold: true, color: C.accent,
+  // Limitations teaser
+  s.addText("Nhưng: chỉ classification, data nhỏ, 1 loss → v2 sẽ giải quyết", {
+    x: M, y: 5.5, w: CW, h: 0.5,
+    fontFace: FONT, fontSize: 18, italic: true, color: C.gray, align: "center",
   });
 
-  addTable(s,
-    ["Hạn chế", "Ảnh hưởng"],
-    [
-      ["Chỉ 1.28M ảnh", "Đa dạng hạn chế"],
-      ["Chỉ classification", "Segmentation? Depth?"],
-      ["Chỉ CLS token", "Patch-level features?"],
-    ],
-    8, 1.8, 4.8
-  );
-
-  // Câu hỏi v2
-  s.addText("Câu hỏi đặt ra cho v2:", {
-    x: 8, y: 4.0, w: 4.8, h: 0.4,
-    fontFace: FONT, fontSize: 18, bold: true, color: C.v2,
+  // Source
+  s.addText("Nguồn: Caron et al., ICCV 2021", {
+    x: M, y: 6.2, w: CW, h: 0.3,
+    fontFace: FONT, fontSize: 11, italic: true, color: C.medGray,
   });
-  addBullets(s, [
-    "Nhiều data hơn có tốt hơn?",
-    "Làm sao để làm dense tasks?",
-    "Có thể thành Foundation Model?",
-  ], 8, 4.4, 4.8, 2, 16);
 
   addProgress(s, 2);
 
-  s.addNotes(`[KẾT QUẢ V1]
+  s.addNotes(`DINOv1 milestone:
 
-DINOv1 đạt milestone quan trọng:
-80.1% ImageNet với 0 labels - LẦN ĐẦU SSL vượt supervised!
+80.1% ImageNet với 0 labels.
+Lần đầu SSL vượt supervised!
 
-Emerging properties: attention heads TỰ ĐỘNG segment objects mà không ai dạy.
+So sánh:
+- Supervised ViT: 76.5% (nhưng cần 14M nhãn)
+- SimCLR: 69.3%
+- BYOL: 74.3%
 
-Nhưng còn hạn chế:
-- Chỉ train trên ImageNet (1.28M ảnh)
-- Chỉ làm tốt classification
-- Dùng 1 loss (CLS token)
+Emerging properties:
+- Attention maps tự động focus đúng objects
+- Nearest neighbor tìm semantically similar images
 
-Câu hỏi cho v2:
-- Nhiều data hơn có tốt không? Curation như thế nào?
-- Dense tasks (segmentation, depth) cần gì?
-- Có thể làm Foundation Model - 1 backbone cho mọi task?`);
+Hạn chế của v1:
+- Chỉ ImageNet (1.28M ảnh)
+- Chỉ classification
+- Chỉ CLS token loss
+
+→ v2 sẽ giải quyết những hạn chế này.
+
+Nguồn: Caron et al., ICCV 2021`);
 
   return s;
 }

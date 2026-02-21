@@ -1,74 +1,77 @@
 /**
- * Slide 21: Text Alignment
+ * Slide 21: DINOv3 Results
  */
 
 const {
-  C, FONT, M,
-  addTitle, addProgress, addPlaceholder, addTable
-} = require('./config');
+  C, FONT, M, CW,
+  addTitle, addProgress
+, SHAPES } = require('./config');
 
 function create(pres) {
   const s = pres.addSlide();
   s.background = { color: C.bg };
 
-  addTitle(s, "Text Alignment: Học Nhìn Trước, Học Nói Sau", C.v3);
+  addTitle(s, "Kết Quả DINOv3", C.v3);
 
-  // Minh họa
-  addPlaceholder(s, M, 1.3, 6, 3,
-    "CLIP: train chung | DINOv3: Phase 1 (SSL), Phase 2 (freeze + text)", C.v3);
+  // Big numbers
+  const results = [
+    { num: "88.4%", task: "ImageNet", delta: "+2.0%" },
+    { num: "55.9", task: "ADE20k mIoU", delta: "+6.4" },
+    { num: "7B", task: "parameters", delta: "" },
+  ];
 
-  // So sánh
-  s.addText("CLIP vs DINOv3:", {
-    x: 7, y: 1.3, w: 5.8, h: 0.4,
-    fontFace: FONT, fontSize: 18, bold: true, color: C.black,
+  results.forEach((r, i) => {
+    const x = M + i * 4;
+
+    s.addText(r.num, {
+      x, y: 1.6, w: 3.5, h: 0.9,
+      fontFace: FONT, fontSize: 48, bold: true, color: C.v3,
+    });
+
+    s.addText(r.task, {
+      x, y: 2.5, w: 3.5, h: 0.4,
+      fontFace: FONT, fontSize: 16, color: C.gray,
+    });
+
+    if (r.delta) {
+      s.addText(r.delta, {
+        x, y: 2.9, w: 3.5, h: 0.4,
+        fontFace: FONT, fontSize: 16, color: C.success,
+      });
+    }
   });
 
-  addTable(s,
-    ["", "CLIP", "DINOv3"],
-    [
-      ["Vision encoder", "Train chung", "ĐÓNG BĂNG"],
-      ["Train gì?", "Cả 2 encoders", "Chỉ text + 2 layers"],
-      ["Features dùng", "Chỉ CLS", "CLS + patches"],
-      ["Dense tasks", "Kém", "Xuất sắc"],
-    ],
-    7, 1.7, 5.8
-  );
-
-  // Kết quả
-  s.addText("Kết quả segmentation:", {
-    x: M, y: 4.8, w: 6, h: 0.4,
-    fontFace: FONT, fontSize: 18, bold: true, color: C.v3,
+  // Achievement box
+  s.addShape(SHAPES.RECTANGLE, {
+    x: M, y: 3.8, w: CW, h: 1.5,
+    fill: { color: "E8F5E9" },
+    line: { color: C.v3, pt: 2 },
   });
 
-  addTable(s,
-    ["Model", "ADE20k mIoU"],
-    [
-      ["CLIP ViT-L", "6.0"],
-      ["EVA-02-CLIP", "10.9"],
-      ["DINOv3", "24.7 (tốt gấp 4!)"],
-    ],
-    M, 5.2, 5
-  );
+  s.addText("Thành tựu lịch sử:", {
+    x: M + 0.2, y: 4.0, w: CW - 0.4, h: 0.4,
+    fontFace: FONT, fontSize: 20, bold: true, color: C.v3,
+  });
+
+  s.addText("• SSL ĐẦU TIÊN ngang weakly-supervised\n• SOTA trên COCO, ADE20k với FROZEN backbone", {
+    x: M + 0.2, y: 4.4, w: CW - 0.4, h: 0.8,
+    fontFace: FONT, fontSize: 18, color: C.black,
+  });
 
   addProgress(s, 4);
 
-  s.addNotes(`[TEXT ALIGNMENT]
+  s.addNotes(`DINOv3 đạt kết quả ấn tượng:
 
-CLIP train vision và text CHUNG → vision features bị degrade cho dense tasks.
+- 88.4% ImageNet (từ 86.5%)
+- 55.9 mIoU ADE20k (từ 49.0)
+- 7B parameters
 
-DINOv3 dùng decoupled training:
-- Phase 1: Train SSL backbone (1M iterations, không text)
-- Phase 2: ĐÓNG BĂNG vision, chỉ train text encoder
+Thành tựu lịch sử:
+- SSL đầu tiên ngang weakly-supervised trên ImageNet
+- SOTA COCO detection với frozen backbone
+- SOTA ADE20k segmentation với frozen backbone
 
-Ưu điểm:
-- Vision features = pure visual understanding
-- Thêm text KHÔNG làm hỏng vision
-- Dense features PRESERVED
-
-Kết quả:
-DINOv3 đạt 24.7 mIoU vs CLIP 6.0 → tốt gấp 4 lần!
-
-"Học nhìn trước, học nói sau" - không để language bias ảnh hưởng vision.`);
+Gram Anchoring giải quyết dense feature degradation.`);
 
   return s;
 }

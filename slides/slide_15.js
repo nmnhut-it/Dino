@@ -1,74 +1,60 @@
 /**
- * Slide 15: iBOT Loss
+ * Slide 15: KoLeo Loss
  */
 
 const {
   C, FONT, M, CW,
-  addTitle, addProgress, addFormula, addPlaceholder, addTable
-} = require('./config');
+  addTitle, addProgress, addPlaceholder
+, SHAPES } = require('./config');
 
 function create(pres) {
   const s = pres.addSlide();
   s.background = { color: C.bg };
 
-  addTitle(s, "iBOT: Che Patches, Đoán Ý Nghĩa", C.v2);
+  addTitle(s, "KoLeo: Đẩy Ra Xa Nhau", C.v2);
 
-  // Minh họa
-  addPlaceholder(s, M, 1.3, 6, 3,
-    "Student thấy ảnh bị che | Teacher thấy ảnh đầy đủ", C.v2);
+  // Visual
+  addPlaceholder(s, M, 1.4, CW, 2.5,
+    "[Không KoLeo: tụm cục] → [Có KoLeo: trải đều trên sphere]", C.v2);
 
-  // Công thức
-  s.addText("Công thức iBOT:", {
-    x: 7, y: 1.3, w: 5.8, h: 0.4,
-    fontFace: FONT, fontSize: 18, bold: true, color: C.v2,
-  });
-  addFormula(s, "L_iBOT = -Σᵢ pₜᵢ · log(pₛᵢ)\n\ni = vị trí patches bị che\nStudent đoán semantic token\n(không phải đoán pixel)", 7, 1.7, 5.8, 1.8, C.v2);
-
-  // So sánh với MAE
-  s.addText("So sánh với MAE:", {
-    x: M, y: 4.6, w: CW, h: 0.4,
-    fontFace: FONT, fontSize: 18, bold: true, color: C.black,
+  // Simple explanation
+  s.addText("Ý tưởng đơn giản:", {
+    x: M, y: 4.2, w: CW, h: 0.5,
+    fontFace: FONT, fontSize: 20, bold: true, color: C.v2,
   });
 
-  addTable(s,
-    ["", "MAE", "iBOT"],
-    [
-      ["Đoán gì?", "Pixel values", "Semantic tokens"],
-      ["Loss", "MSE (L2)", "Cross-entropy"],
-      ["Features", "Cần fine-tune", "FROZEN vẫn tốt"],
-    ],
-    M, 5.0, CW * 0.7
-  );
+  s.addText("Đẩy mỗi embedding ra xa neighbor gần nhất\n→ Embeddings trải đều, không cluster", {
+    x: M, y: 4.7, w: CW, h: 0.8,
+    fontFace: FONT, fontSize: 20, color: C.black,
+  });
 
-  // Note
-  s.addText("Ở scale lớn: Tách riêng DINO head và iBOT head cho kết quả tốt hơn", {
-    x: 9, y: 5.5, w: 4, h: 0.6,
-    fontFace: FONT, fontSize: 14, italic: true, color: C.medGray,
+  // Impact
+  s.addShape(SHAPES.RECTANGLE, {
+    x: M, y: 5.6, w: CW, h: 0.9,
+    fill: { color: "FFF5F5" },
+  });
+
+  s.addText("Bỏ KoLeo: Classification -0.5%, Retrieval -8.3%!", {
+    x: M + 0.2, y: 5.75, w: CW - 0.4, h: 0.6,
+    fontFace: FONT, fontSize: 20, bold: true, color: C.accent, align: "center",
   });
 
   addProgress(s, 3);
 
-  s.addNotes(`[iBOT LOSS]
+  s.addNotes(`KoLeo = Kozachenko-Leonenko entropy.
 
-iBOT = image BERT.
+Ý tưởng: tối đa khoảng cách đến neighbor gần nhất.
+→ Embeddings trải đều, không bị cluster.
 
-Ý tưởng như BERT: che một phần, đoán phần bị che.
+Ablation:
+- Bỏ KoLeo: Classification chỉ tụt 0.5%
+- Nhưng Retrieval tụt 8.3%!
 
-Student nhận ảnh bị che (masked).
-Teacher nhận ảnh đầy đủ.
-Student phải predict Teacher output tại vị trí masked.
+Tại sao?
+- Classification chỉ cần linearly separable
+- Retrieval cần fine-grained distances
 
-Khác MAE ở chỗ:
-- MAE đoán pixel values → texture, low-level
-- iBOT đoán semantic token từ Teacher → high-level meaning
-
-Ví dụ:
-- MAE: "pixel này màu xanh"
-- iBOT: "đây là phần tai của con chó"
-
-Kết quả: frozen iBOT features hoạt động gần như fine-tuned MAE trên segmentation.
-
-Ở scale lớn, UNTIED heads (tách riêng DINO và iBOT heads) tốt hơn.`);
+Weight = 0.1 (nhẹ nhàng nhưng quan trọng).`);
 
   return s;
 }

@@ -1,75 +1,64 @@
 /**
- * Slide 13: v1 Limitations → v2 Questions
+ * Slide 13: Data Curation
  */
 
 const {
   C, FONT, M, CW,
-  addTitle, addProgress, addTable
+  addTitle, addProgress, addPlaceholder
 , SHAPES } = require('./config');
 
 function create(pres) {
   const s = pres.addSlide();
   s.background = { color: C.bg };
 
-  addTitle(s, "Từ v1 Sang v2: Những Gì Cần Cải Thiện?", C.v2);
+  addTitle(s, "Data Curation: Ít Mà Chất", C.v2);
 
-  addTable(s,
-    ["Khía cạnh", "v1 có gì", "v2 cần trả lời"],
-    [
-      ["Dữ liệu", "1.28M ảnh (ImageNet)", "Tỉ ảnh? Curate thế nào?"],
-      ["Tasks", "Chỉ Classification", "Segmentation, depth được không?"],
-      ["Loss", "Chỉ CLS token", "Patch-level features?"],
-      ["Model size", "ViT-B/S (86M)", "Tỉ parameters?"],
-    ],
-    M, 1.3, CW
-  );
+  // Visual pipeline
+  addPlaceholder(s, M, 1.4, CW, 2.5,
+    "[Phễu: 1.2B → 744M → 142M ảnh]", C.v2);
 
-  // Foundation Model
-  s.addShape(SHAPES.RECTANGLE, {
-    x: M, y: 4.0, w: CW, h: 1.2,
-    fill: { color: C.cream },
-    line: { color: C.v2, pt: 2 },
-  });
-  s.addText("Mục tiêu lớn: Foundation Model", {
-    x: M + 0.2, y: 4.1, w: CW - 0.4, h: 0.4,
-    fontFace: FONT, fontSize: 18, bold: true, color: C.v2,
-  });
-  s.addText("\"1 backbone pretrained → dùng cho MỌI tasks → chỉ cần thêm linear head\"", {
-    x: M + 0.2, y: 4.5, w: CW - 0.4, h: 0.6,
-    fontFace: FONT, fontSize: 20, italic: true, color: C.black,
-  });
-
-  // 3 đổi mới
-  s.addText("Ba thay đổi chính của v2:", {
-    x: M, y: 5.5, w: CW, h: 0.4,
+  // Key steps
+  s.addText("Lọc gì?", {
+    x: M, y: 4.2, w: 3, h: 0.5,
     fontFace: FONT, fontSize: 20, bold: true, color: C.v2,
   });
-  s.addText("1. Data Curation (LVD-142M)    2. Ba Losses (DINO + iBOT + KoLeo)    3. Scale lên ViT-g (1.1B)", {
-    x: M, y: 5.9, w: CW, h: 0.5,
-    fontFace: FONT, fontSize: 18, color: C.gray,
+
+  s.addText("• NSFW, domains xấu\n• Ảnh trùng lặp\n• Ảnh giống test sets", {
+    x: M, y: 4.7, w: 5, h: 1.2,
+    fontFace: FONT, fontSize: 18, color: C.black,
+  });
+
+  // Key result
+  s.addShape(SHAPES.RECTANGLE, {
+    x: 7, y: 4.2, w: 5.8, h: 1.7,
+    fill: { color: "FFF3E0" },
+    line: { color: C.v2, pt: 2 },
+  });
+
+  s.addText("Kết quả bất ngờ:", {
+    x: 7.2, y: 4.4, w: 5.4, h: 0.4,
+    fontFace: FONT, fontSize: 18, bold: true, color: C.v2,
+  });
+
+  s.addText("142M curated\nTHẮNG 1.2B uncurated\ntrên MỌI benchmark!", {
+    x: 7.2, y: 4.8, w: 5.4, h: 1,
+    fontFace: FONT, fontSize: 20, bold: true, color: C.black,
   });
 
   addProgress(s, 3);
 
-  s.addNotes(`[TỪ V1 SANG V2]
+  s.addNotes(`Data curation: từ 1.2 tỉ → 142 triệu ảnh.
 
-DINOv1 hay nhưng còn hạn chế.
+Các bước lọc:
+- NSFW, restricted domains
+- Ảnh trùng lặp (PCA hash, copy-detection)
+- Ảnh giống test benchmarks (tránh data leak)
 
-Nếu có TỈ ảnh thì sao? Nhưng data nhiều chưa chắc tốt - cần curate.
+Kết quả BẤT NGỜ:
+142M curated THẮNG 1.2B uncurated!
+Ít hơn 8 lần mà tốt hơn.
 
-Classification thì được, nhưng segmentation, depth estimation thì sao?
-
-CLS token cho global understanding, nhưng patches thì chưa học.
-
-Mục tiêu v2: Foundation Model
-- 1 backbone cho tất cả
-- Classification, segmentation, depth, retrieval
-- Không cần fine-tune - frozen features + simple head
-
-3 đổi mới chính:
-1. Data curation pipeline (LVD-142M)
-2. 3 losses: DINO + iBOT + KoLeo
-3. Scale lên 1.1B parameters`);
+Quality > Quantity.`);
 
   return s;
 }

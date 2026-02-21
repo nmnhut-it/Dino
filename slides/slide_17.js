@@ -1,75 +1,75 @@
 /**
- * Slide 17: Three Losses Combined
+ * Slide 17: DINOv2 Results
  */
 
 const {
   C, FONT, M, CW,
-  addTitle, addProgress, addFormula, addPlaceholder, addTable
-} = require('./config');
+  addTitle, addProgress
+, SHAPES } = require('./config');
 
 function create(pres) {
   const s = pres.addSlide();
   s.background = { color: C.bg };
 
-  addTitle(s, "Ba Losses Kết Hợp - Mỗi Cái Một Việc", C.v2);
+  addTitle(s, "Kết Quả DINOv2", C.v2);
 
-  // Minh họa
-  addPlaceholder(s, M, 1.3, 6, 3.5,
-    "ViT → CLS (DINO) + Patches (iBOT) + Diversity (KoLeo)", C.v2);
+  // Big numbers
+  const results = [
+    { num: "86.5%", task: "ImageNet", prev: "82.3%" },
+    { num: "49.0", task: "ADE20k mIoU", prev: "44.6" },
+    { num: "+41%", task: "Retrieval vs SSL", prev: "" },
+  ];
 
-  // Công thức
-  addFormula(s, "L_total = L_DINO + L_iBOT + 0.1 × L_KoLeo", 7, 1.3, 5.8, 0.8, C.v2);
+  results.forEach((r, i) => {
+    const x = M + i * 4;
 
-  // Mỗi loss làm gì
-  s.addText("Mỗi loss phụ trách gì:", {
-    x: 7, y: 2.3, w: 5.8, h: 0.4,
-    fontFace: FONT, fontSize: 18, bold: true, color: C.black,
+    s.addText(r.num, {
+      x, y: 1.6, w: 3.5, h: 0.9,
+      fontFace: FONT, fontSize: 48, bold: true, color: C.v2,
+    });
+
+    s.addText(r.task, {
+      x, y: 2.5, w: 3.5, h: 0.5,
+      fontFace: FONT, fontSize: 16, color: C.gray,
+    });
   });
 
-  addTable(s,
-    ["Loss", "Nhìn vào", "Tốt cho task"],
-    [
-      ["DINO", "CLS token", "Classification, retrieval"],
-      ["iBOT", "Masked patches", "Segmentation, depth"],
-      ["KoLeo", "Batch diversity", "Retrieval precision"],
-    ],
-    7, 2.7, 5.8
-  );
-
-  // Ablation
-  s.addText("Bỏ từng cái thì sao:", {
-    x: M, y: 5.0, w: CW, h: 0.4,
-    fontFace: FONT, fontSize: 18, bold: true, color: C.accent,
+  // Foundation Model box
+  s.addShape(SHAPES.RECTANGLE, {
+    x: M, y: 3.5, w: CW, h: 1.3,
+    fill: { color: "FFF3E0" },
+    line: { color: C.v2, pt: 2 },
   });
 
-  addTable(s,
-    ["Bỏ đi", "ImageNet", "ADE20k mIoU", "Retrieval"],
-    [
-      ["Không bỏ gì", "85.8%", "47.1", "63.9%"],
-      ["Bỏ KoLeo", "85.3%", "47.2", "55.6%"],
-      ["Bỏ iBOT", "85.3%", "44.2 (-2.9)", "64.3%"],
-    ],
-    M, 5.4, CW * 0.8
-  );
+  s.addText("Foundation Model thực sự:", {
+    x: M + 0.2, y: 3.7, w: CW - 0.4, h: 0.4,
+    fontFace: FONT, fontSize: 20, bold: true, color: C.v2,
+  });
+
+  s.addText("1 backbone FROZEN + linear head → SOTA nhiều tasks", {
+    x: M + 0.2, y: 4.1, w: CW - 0.4, h: 0.5,
+    fontFace: FONT, fontSize: 20, color: C.black,
+  });
+
+  // vs CLIP
+  s.addText("Thắng OpenCLIP mà KHÔNG cần text!", {
+    x: M, y: 5.3, w: CW, h: 0.5,
+    fontFace: FONT, fontSize: 22, bold: true, color: C.accent, align: "center",
+  });
 
   addProgress(s, 3);
 
-  s.addNotes(`[BA LOSSES]
+  s.addNotes(`DINOv2 đạt Foundation Model status:
 
-Ba losses, mỗi cái lo một việc:
+Results:
+- 86.5% ImageNet (từ 82.3%)
+- 49.0 mIoU ADE20k (từ 44.6)
+- +41% retrieval vs prior SSL
 
-DINO: CLS token → global understanding → classification
-iBOT: Patches → local understanding → segmentation
-KoLeo: Diversity → không cluster → retrieval
+1 backbone, FROZEN, chỉ thêm linear head → SOTA.
 
-Ablation:
-- Bỏ KoLeo → retrieval tụt 8%
-- Bỏ iBOT → segmentation tụt 3 mIoU
-
-Không phải small effects. Mỗi loss đều cần thiết.
-
-DINO + iBOT + KoLeo = comprehensive learning signal
-- Global + Local + Diversity`);
+Thắng OpenCLIP dù không dùng text!
+Pure visual SSL với đúng losses và data = đủ mạnh.`);
 
   return s;
 }

@@ -1,69 +1,120 @@
 /**
- * Slide 5: Loss Function
+ * Slide 5: Student - Student Network Architecture
  */
 
 const {
   C, FONT, M, CW,
-  addTitle, addProgress, addFormula, addBullets
-} = require('./config');
+  addTitle, addProgress
+, SHAPES } = require('./config');
 
 function create(pres) {
   const s = pres.addSlide();
   s.background = { color: C.bg };
 
-  addTitle(s, "Hàm Loss - Đo Sự Khác Biệt", C.v1);
+  addTitle(s, "Student", C.v1);
 
-  // Loss chính
-  s.addText("Cross-Entropy Loss:", {
-    x: M, y: 1.2, w: CW, h: 0.4,
-    fontFace: FONT, fontSize: 20, bold: true, color: C.v1,
+  // Architecture diagram
+  s.addShape(SHAPES.RECTANGLE, {
+    x: M, y: 1.4, w: CW, h: 2.8,
+    fill: { color: "F5F5F5" },
+    line: { color: C.v1, pt: 1 },
   });
 
-  addFormula(s, "L = -Σₖ Pₜ(x)[k] · log Pₛ(x')[k]", M, 1.6, CW, 0.8, C.v1);
+  // Flow: Input → Backbone → Head → Output
+  const flowY = 2.6;
+  const boxW = 2.5;
+  const boxH = 1;
 
-  // Student
-  s.addText("Xác suất của Student:", {
-    x: M, y: 2.6, w: 6, h: 0.4,
-    fontFace: FONT, fontSize: 18, bold: true, color: C.black,
+  // Input
+  s.addShape(SHAPES.RECTANGLE, {
+    x: 1, y: flowY, w: boxW, h: boxH,
+    fill: { color: C.cream },
+    line: { color: C.gray, pt: 1 },
   });
-  addFormula(s, "Pₛ(x)[k] = exp(gθₛ(x)[k] / τₛ) / Σₖ' exp(...)\n\nτₛ = 0.1 (nhiệt độ Student)", M, 3.0, 6.2, 1.3, C.v1);
+  s.addText("Local crops\n96×96", {
+    x: 1, y: flowY, w: boxW, h: boxH,
+    fontFace: FONT, fontSize: 16, color: C.black, align: "center", valign: "middle",
+  });
 
-  // Teacher
-  s.addText("Xác suất của Teacher:", {
-    x: 6.8, y: 2.6, w: 6, h: 0.4,
-    fontFace: FONT, fontSize: 18, bold: true, color: C.black,
+  // Arrow 1
+  s.addText("→", {
+    x: 3.5, y: flowY, w: 0.8, h: boxH,
+    fontFace: FONT, fontSize: 32, color: C.gray, align: "center", valign: "middle",
   });
-  addFormula(s, "Pₜ(x)[k] = exp((gθₜ(x)[k] - c[k]) / τₜ) / Σₖ'...\n\nτₜ = 0.04, c = centering", 6.8, 3.0, 6, 1.5, C.v1);
 
-  // Giải thích
-  s.addText("Hiểu đơn giản:", {
-    x: M, y: 4.8, w: CW, h: 0.4,
-    fontFace: FONT, fontSize: 18, bold: true, color: C.black,
+  // Backbone
+  s.addShape(SHAPES.RECTANGLE, {
+    x: 4.3, y: flowY, w: boxW, h: boxH,
+    fill: { color: C.v1 },
   });
-  addBullets(s, [
-    "Cross-entropy đo: 2 phân phối khác nhau bao nhiêu",
-    "Minimize loss → Student tiến gần Teacher",
-    "Teacher là \"đáp án\", Student là \"bài làm\"",
-  ], M, 5.2, CW, 1.5, 18);
+  s.addText("ViT\nBackbone f", {
+    x: 4.3, y: flowY, w: boxW, h: boxH,
+    fontFace: FONT, fontSize: 16, bold: true, color: "FFFFFF", align: "center", valign: "middle",
+  });
+
+  // Arrow 2
+  s.addText("→", {
+    x: 6.8, y: flowY, w: 0.8, h: boxH,
+    fontFace: FONT, fontSize: 32, color: C.gray, align: "center", valign: "middle",
+  });
+
+  // Head
+  s.addShape(SHAPES.RECTANGLE, {
+    x: 7.6, y: flowY, w: boxW, h: boxH,
+    fill: { color: C.v1 },
+  });
+  s.addText("MLP Head h\n3 layers", {
+    x: 7.6, y: flowY, w: boxW, h: boxH,
+    fontFace: FONT, fontSize: 16, bold: true, color: "FFFFFF", align: "center", valign: "middle",
+  });
+
+  // Arrow 3
+  s.addText("→", {
+    x: 10.1, y: flowY, w: 0.8, h: boxH,
+    fontFace: FONT, fontSize: 32, color: C.gray, align: "center", valign: "middle",
+  });
+
+  // Output
+  s.addShape(SHAPES.RECTANGLE, {
+    x: 10.9, y: flowY, w: 1.8, h: boxH,
+    fill: { color: C.cream },
+    line: { color: C.gray, pt: 1 },
+  });
+  s.addText("P_s\nK dims", {
+    x: 10.9, y: flowY, w: 1.8, h: boxH,
+    fontFace: FONT, fontSize: 16, color: C.black, align: "center", valign: "middle",
+  });
+
+  // Key specs
+  s.addText("g = h ∘ f", {
+    x: M, y: 4.5, w: 3, h: 0.5,
+    fontFace: "Consolas", fontSize: 24, bold: true, color: C.v1,
+  });
+
+  s.addText("• Backbone: ViT (Vision Transformer)\n• Head: 3-layer MLP, 2048 hidden, K=65536 output\n• Được train bằng gradient descent", {
+    x: M, y: 5.1, w: CW, h: 1.3,
+    fontFace: FONT, fontSize: 20, color: C.black,
+  });
 
   addProgress(s, 2);
 
-  s.addNotes(`[LOSS FUNCTION]
+  s.addNotes(`Student network architecture:
 
-Loss dùng cross-entropy - đo sự khác biệt giữa 2 phân phối xác suất.
+g = h ∘ f nghĩa là:
+- f = backbone (ViT)
+- h = projection head (MLP)
+- g = toàn bộ network
 
-Student dùng softmax chuẩn với temperature τ_s = 0.1.
-Teacher dùng softmax với centering (trừ c) và temperature τ_t = 0.04.
+Specs:
+- Backbone: ViT-S/16 hoặc lớn hơn
+- Head: 3-layer MLP
+  - Hidden dim: 2048
+  - Output dim: K=65536
+  - Weight normalization
+  - No batch normalization
 
-Tại sao temperature khác nhau? Slide sau sẽ giải thích.
-Tại sao có centering? Cũng slide sau.
-
-Hiểu đơn giản:
-- Teacher cho "đáp án" - phân phối xác suất trên K categories
-- Student phải học để output giống vậy
-- K = 65,536 có thể hiểu như số "loại" ẩn mà model học
-
-Minimize loss = Student càng giống Teacher.`);
+Student nhận LOCAL crops (96×96).
+Được train trực tiếp bằng gradient descent.`);
 
   return s;
 }

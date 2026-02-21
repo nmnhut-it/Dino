@@ -1,74 +1,75 @@
 /**
- * Slide 16: KoLeo Loss
+ * Slide 16: Three Losses Summary
  */
 
 const {
-  C, FONT, M,
-  addTitle, addProgress, addFormula, addPlaceholder, addTable
-} = require('./config');
+  C, FONT, M, CW,
+  addTitle, addProgress
+, SHAPES } = require('./config');
 
 function create(pres) {
   const s = pres.addSlide();
   s.background = { color: C.bg };
 
-  addTitle(s, "KoLeo: Đẩy Các Embeddings Ra Xa Nhau", C.v2);
+  addTitle(s, "3 Losses = 3 Việc", C.v2);
 
-  // Minh họa
-  addPlaceholder(s, M, 1.3, 5.5, 3,
-    "Không KoLeo: tụm cục | Có KoLeo: trải đều trên hypersphere", C.v2);
+  // Three boxes
+  const losses = [
+    { name: "DINO", what: "CLS token", task: "Classification", color: C.v1 },
+    { name: "iBOT", what: "Patches", task: "Segmentation", color: C.v2 },
+    { name: "KoLeo", what: "Diversity", task: "Retrieval", color: C.success },
+  ];
 
-  // Công thức
-  s.addText("Công thức KoLeo:", {
-    x: 6.5, y: 1.3, w: 6.3, h: 0.4,
-    fontFace: FONT, fontSize: 18, bold: true, color: C.v2,
+  losses.forEach((loss, i) => {
+    const x = M + i * 4;
+
+    s.addShape(SHAPES.RECTANGLE, {
+      x, y: 1.6, w: 3.6, h: 3,
+      fill: { color: C.bg },
+      line: { color: loss.color, pt: 3 },
+    });
+
+    s.addText(loss.name, {
+      x: x + 0.1, y: 1.8, w: 3.4, h: 0.6,
+      fontFace: FONT, fontSize: 28, bold: true, color: loss.color, align: "center",
+    });
+
+    s.addText(loss.what, {
+      x: x + 0.1, y: 2.6, w: 3.4, h: 0.5,
+      fontFace: FONT, fontSize: 18, color: C.gray, align: "center",
+    });
+
+    s.addText("↓", {
+      x: x + 0.1, y: 3.1, w: 3.4, h: 0.4,
+      fontFace: FONT, fontSize: 24, color: C.medGray, align: "center",
+    });
+
+    s.addText(loss.task, {
+      x: x + 0.1, y: 3.5, w: 3.4, h: 0.5,
+      fontFace: FONT, fontSize: 18, bold: true, color: C.black, align: "center",
+    });
   });
-  addFormula(s, "L_KoLeo = -(1/n) Σᵢ log(d_{n,i})\n\nd_{n,i} = min_{j≠i} ||xᵢ - xⱼ||\n= khoảng cách đến neighbor gần nhất", 6.5, 1.7, 6.3, 1.8, C.v2);
 
-  // Trực giác
-  s.addText("Hiểu đơn giản:", {
-    x: 6.5, y: 3.7, w: 6.3, h: 0.4,
-    fontFace: FONT, fontSize: 18, bold: true, color: C.black,
+  // Combined result
+  s.addText("Kết hợp: Global + Local + Diverse = Foundation Model", {
+    x: M, y: 5.2, w: CW, h: 0.6,
+    fontFace: FONT, fontSize: 22, bold: true, color: C.v2, align: "center",
   });
-  s.addText("• Tối đa hóa khoảng cách đến hàng xóm gần nhất\n• → Embeddings trải đều, không tụm cục\n• Weight = 0.1 (nhẹ nhàng thôi)", {
-    x: 6.5, y: 4.1, w: 6.3, h: 1.5,
-    fontFace: FONT, fontSize: 16, color: C.gray,
-  });
-
-  // Ablation
-  s.addText("Bỏ KoLeo thì sao?", {
-    x: M, y: 4.6, w: 5.5, h: 0.4,
-    fontFace: FONT, fontSize: 18, bold: true, color: C.accent,
-  });
-
-  addTable(s,
-    ["Cấu hình", "ImageNet", "Retrieval"],
-    [
-      ["Đầy đủ", "85.8%", "63.9%"],
-      ["Bỏ KoLeo", "85.3% (-0.5)", "55.6% (-8.3!)"],
-    ],
-    M, 5.0, 5.5
-  );
 
   addProgress(s, 3);
 
-  s.addNotes(`[KOLEO LOSS]
+  s.addNotes(`3 losses, mỗi cái lo một việc:
 
-KoLeo từ Kozachenko-Leonenko entropy estimator.
+DINO: học CLS token → classification
+iBOT: học patches → segmentation, depth
+KoLeo: đẩy diverse → retrieval
 
-Ý tưởng: đẩy mỗi embedding ra xa neighbor gần nhất của nó.
-→ Embeddings trải đều trên hypersphere, không cluster.
+Kết hợp = comprehensive learning:
+- Global understanding (DINO)
+- Local understanding (iBOT)
+- Diversity (KoLeo)
 
-Công thức: maximize log của min distance to nearest neighbor.
-
-Ablation rất striking:
-- Bỏ KoLeo chỉ hurt ImageNet nhẹ (-0.5%)
-- Nhưng DESTROY retrieval (-8.3%)!
-
-Tại sao?
-- Classification chỉ cần linearly separable
-- Retrieval cần preserve fine-grained distances
-
-KoLeo applied với weight 0.1, chỉ trên CLS tokens.`);
+→ Foundation Model: 1 backbone cho mọi task.`);
 
   return s;
 }

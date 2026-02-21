@@ -65,7 +65,7 @@ function addTitle(slide, text, color = C.green) {
   });
   slide.addText(text, {
     x: M, y: 0.15, w: W - 2 * M, h: 0.6,
-    fontFace: FONT_TITLE, fontSize: 32, bold: true, italic: true,
+    fontFace: FONT_TITLE, fontSize: 32, bold: true,
     color: "FFFFFF",
   });
 }

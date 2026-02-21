@@ -1,78 +1,64 @@
 /**
- * Slide 7: EMA Teacher
+ * Slide 7: So Sánh - Student vs Teacher Comparison
  */
 
 const {
   C, FONT, M, CW,
-  addTitle, addProgress, addFormula, addTable, addBullets
-, SHAPES } = require('./config');
+  addTitle, addProgress, addTable
+} = require('./config');
 
 function create(pres) {
   const s = pres.addSlide();
   s.background = { color: C.bg };
 
-  addTitle(s, "Trick 1: EMA - Teacher Cập Nhật Cực Chậm", C.v1);
+  addTitle(s, "So Sánh", C.v1);
 
-  // Công thức
-  addFormula(s, "θₜ ← λ·θₜ + (1-λ)·θₛ\n\nλ = 0.996 → 1.0 (tăng dần theo thời gian)", M, 1.3, 7, 1.4, C.v1);
+  // Comparison table
+  const headers = ["", "Student", "Teacher"];
+  const rows = [
+    ["Kiến trúc", "g = h ∘ f", "g = h ∘ f (giống)"],
+    ["Input", "Local crops 96²", "Global crops 224²"],
+    ["Centering", "Không", "Có (- c)"],
+    ["Temperature", "τ = 0.1 (soft)", "τ = 0.04 (sharp)"],
+    ["Training", "Gradient descent", "EMA từ Student"],
+  ];
 
-  // Giải thích
-  s.addText("Hiểu đơn giản:", {
-    x: M, y: 3.0, w: 6.5, h: 0.4,
-    fontFace: FONT, fontSize: 20, bold: true, color: C.black,
-  });
-  addBullets(s, [
-    "Teacher giữ 99.6% weights cũ",
-    "Chỉ lấy 0.4% từ Student",
-    "λ tăng dần → Teacher càng \"đóng băng\"",
-  ], M, 3.4, 6.5, 1.8, 18);
+  addTable(s, headers, rows, M, 1.4, CW);
 
-  // Tại sao hoạt động
-  s.addText("Tại sao trick này hoạt động:", {
-    x: 8, y: 1.3, w: 4.8, h: 0.4,
-    fontFace: FONT, fontSize: 20, bold: true, color: C.v1,
+  // Key insight
+  s.addText("Teacher thấy nhiều hơn + output sharp hơn", {
+    x: M, y: 4.8, w: CW, h: 0.6,
+    fontFace: FONT, fontSize: 24, bold: true, color: C.green, align: "center",
   });
 
-  addTable(s,
-    ["Lý do", "Giải thích"],
-    [
-      ["Không \"thông đồng\"", "2 bên update khác tốc độ"],
-      ["Teacher > Student", "EMA = trung bình nhiều models"],
-      ["Target ổn định", "Teacher thay đổi chậm"],
-    ],
-    8, 1.8, 4.8
-  );
-
-  // Insight quan trọng
-  s.addShape(SHAPES.RECTANGLE, {
-    x: M, y: 5.3, w: CW, h: 1,
-    fill: { color: C.cream },
-  });
-  s.addText("Phát hiện thú vị: Teacher luôn GIỎI HƠN Student trong suốt quá trình training! Vì EMA = trung bình của nhiều versions → ổn định hơn từng cá thể.", {
-    x: M + 0.2, y: 5.4, w: CW - 0.4, h: 0.9,
-    fontFace: FONT, fontSize: 16, italic: true, color: C.gray, valign: "middle",
+  s.addText("→ Student học \"tóm tắt\" từ cái nhìn toàn cục của Teacher", {
+    x: M, y: 5.5, w: CW, h: 0.5,
+    fontFace: FONT, fontSize: 20, color: C.black, align: "center",
   });
 
   addProgress(s, 2);
 
-  s.addNotes(`[EMA TEACHER]
+  s.addNotes(`So sánh Student vs Teacher:
 
-EMA = Exponential Moving Average.
+1. Kiến trúc: GIỐNG NHAU
+   - Cùng ViT backbone
+   - Cùng MLP head
 
-Mỗi bước training:
-- Teacher giữ 99.6% weights hiện tại
-- Lấy 0.4% từ Student
+2. Input: KHÁC
+   - Student: local crops nhỏ (96×96)
+   - Teacher: global crops lớn (224×224)
+   - Teacher "thấy" nhiều context hơn
 
-Tại sao hoạt động?
-1. Teacher và Student update KHÁC tốc độ → không thể "thông đồng"
-2. EMA như trung bình của nhiều models → ổn định hơn
-3. Teacher performance tốt hơn Student suốt training!
+3. Processing: KHÁC
+   - Teacher có centering (- c)
+   - Teacher dùng temperature thấp hơn (0.04 vs 0.1)
 
-Đây là Polyak-Ruppert averaging - kỹ thuật từ optimization theory.
-Teacher = "ensemble" của tất cả phiên bản Student trước đó.
-Trung bình thường tốt hơn từng cá thể.
+4. Training: KHÁC
+   - Student: gradient descent bình thường
+   - Teacher: EMA copy từ Student
 
-Nếu Teacher và Student update cùng tốc độ → chúng sẽ đồng lõa collapse.`);
+Key insight: Student học cách "tóm tắt" scene từ Teacher.
+Local patch → phải đoán được global context.`);
 
   return s;
 }

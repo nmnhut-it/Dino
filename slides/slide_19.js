@@ -4,8 +4,8 @@
 
 const {
   C, FONT, M, CW,
-  addTitle, addProgress, addPlaceholder, addBullets
-} = require('./config');
+  addTitle, addProgress, addPlaceholder
+, SHAPES } = require('./config');
 
 function create(pres) {
   const s = pres.addSlide();
@@ -13,52 +13,42 @@ function create(pres) {
 
   addTitle(s, "Scale Lên 7B: Vấn Đề Không Ngờ", C.v3);
 
-  // Đồ thị
-  addPlaceholder(s, M, 1.3, 7, 3.5,
-    "Đồ thị: ImageNet tăng đều | ADE20k đỉnh ở 200k rồi GIẢM", C.v3);
+  // Chart placeholder
+  addPlaceholder(s, M, 1.4, CW, 2.8,
+    "[Classification: lên đều | Segmentation: đỉnh 200k rồi GIẢM]", C.v3);
 
-  // Vấn đề
-  s.addText("Vấn đề (KHÔNG phải loss explode!):", {
-    x: 8, y: 1.3, w: 4.8, h: 0.4,
-    fontFace: FONT, fontSize: 18, bold: true, color: C.accent,
+  // Problem box
+  s.addShape(SHAPES.RECTANGLE, {
+    x: M, y: 4.5, w: CW, h: 1.8,
+    fill: { color: "FFF5F5" },
+    line: { color: C.accent, pt: 2 },
   });
 
-  addBullets(s, [
-    "Classification tiếp tục lên",
-    "Segmentation đỉnh ở ~200k",
-    "Rồi BẮT ĐẦU GIẢM!",
-    "Patches \"chết\" dần",
-  ], 8, 1.7, 4.8, 2.5, 16);
-
-  // Nguyên nhân
-  s.addText("Nguyên nhân gốc:", {
-    x: M, y: 5.0, w: CW, h: 0.4,
-    fontFace: FONT, fontSize: 18, bold: true, color: C.v3,
+  s.addText("Vấn đề:", {
+    x: M + 0.2, y: 4.7, w: 3, h: 0.4,
+    fontFace: FONT, fontSize: 20, bold: true, color: C.accent,
   });
-  s.addText("• CLS token và patch outputs trở nên QUÁ GIỐNG nhau\n• Patches mất tính đặc trưng không gian\n• DINO global loss \"nuốt\" mất iBOT local loss", {
-    x: M, y: 5.4, w: CW, h: 1.2,
-    fontFace: FONT, fontSize: 18, color: C.gray,
+
+  s.addText("• Dense features bị degrade\n• Patches \"chết\" dần, mất local info\n• DINO loss dominates, iBOT bị yếu", {
+    x: M + 0.2, y: 5.1, w: CW - 0.4, h: 1.1,
+    fontFace: FONT, fontSize: 18, color: C.black,
   });
 
   addProgress(s, 4);
 
-  s.addNotes(`[THÁCH THỨC 7B]
+  s.addNotes(`Scale lên 7B gặp vấn đề BẤT NGỜ.
 
-Scale lên 7B gặp vấn đề BẤT NGỜ.
+Không phải training diverge - loss vẫn giảm.
+Classification vẫn lên.
 
-Không phải training diverge - loss vẫn giảm, ImageNet vẫn lên.
-
-Nhưng segmentation (ADE20k) đỉnh ở ~200k iterations rồi BẮT ĐẦU GIẢM!
+Nhưng segmentation đỉnh ở ~200k rồi BẮT ĐẦU GIẢM!
 
 Nguyên nhân:
-- CLS token và patch outputs trở nên quá giống nhau
-- Patches "sụp đổ" về phía global summary
-- Mất local specificity
-- DINO global loss dominate, iBOT bị yếu
+- CLS token và patch outputs quá giống nhau
+- Patches "sụp đổ" về global summary
+- DINO global loss dominate
 
-Vấn đề không phải "không converge" mà là "converge SAI"!
-
-Dense features bị degrade trong quá trình training.`);
+Không phải "không converge" mà là "converge SAI".`);
 
   return s;
 }

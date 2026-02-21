@@ -1,62 +1,137 @@
 /**
- * Slide 6: Collapse Problem
- * Vấn đề nghiêm trọng nhất
+ * Slide 6: Teacher - Teacher Network Architecture
  */
 
 const {
   C, FONT, M, CW,
-  addTitle, addProgress, addPlaceholder, addTable
-} = require('./config');
+  addTitle, addProgress
+, SHAPES } = require('./config');
 
 function create(pres) {
   const s = pres.addSlide();
   s.background = { color: C.bg };
 
-  addTitle(s, "Vấn Đề: Collapse - Mọi Thứ Giống Hệt Nhau", C.accent);
+  addTitle(s, "Teacher", C.v1);
 
-  // Minh họa
-  addPlaceholder(s, M, 1.3, CW, 3.2,
-    "Mode Collapse: tất cả điểm tụ về 1 chỗ | Uniform Collapse: điểm trải đều như lưới", C.accent);
-
-  // Giải thích
-  addTable(s,
-    ["Loại Collapse", "Chuyện gì xảy ra", "Hậu quả"],
-    [
-      ["Mode Collapse", "Mọi ảnh → cùng 1 output", "Loss = 0, nhưng vô nghĩa"],
-      ["Uniform Collapse", "Output trải đều, không khác biệt", "Loss thấp, nhưng vô dụng"],
-    ],
-    M, 4.7, CW * 0.7
-  );
-
-  // Tại sao xảy ra
-  s.addText("Tại sao lại thế?", {
-    x: 9, y: 4.7, w: 3.8, h: 0.4,
-    fontFace: FONT, fontSize: 18, bold: true, color: C.accent,
+  // Architecture diagram
+  s.addShape(SHAPES.RECTANGLE, {
+    x: M, y: 1.4, w: CW, h: 2.8,
+    fill: { color: "F5F5F5" },
+    line: { color: C.green, pt: 1 },
   });
-  s.addText("Không có nhãn → không gì buộc Teacher phải output khác nhau cho các ảnh khác nhau.\n\nTeacher và Student \"thông đồng\" → collapse!", {
-    x: 9, y: 5.1, w: 3.8, h: 1.5,
-    fontFace: FONT, fontSize: 15, color: C.gray,
+
+  // Flow: Input → Backbone → Head → Centering → Output
+  const flowY = 2.6;
+  const boxW = 2.2;
+  const boxH = 1;
+
+  // Input
+  s.addShape(SHAPES.RECTANGLE, {
+    x: 0.8, y: flowY, w: boxW, h: boxH,
+    fill: { color: C.cream },
+    line: { color: C.gray, pt: 1 },
+  });
+  s.addText("Global crops\n224×224", {
+    x: 0.8, y: flowY, w: boxW, h: boxH,
+    fontFace: FONT, fontSize: 15, color: C.black, align: "center", valign: "middle",
+  });
+
+  // Arrow 1
+  s.addText("→", {
+    x: 3, y: flowY, w: 0.6, h: boxH,
+    fontFace: FONT, fontSize: 28, color: C.gray, align: "center", valign: "middle",
+  });
+
+  // Backbone
+  s.addShape(SHAPES.RECTANGLE, {
+    x: 3.6, y: flowY, w: boxW, h: boxH,
+    fill: { color: C.green },
+  });
+  s.addText("ViT\nBackbone f", {
+    x: 3.6, y: flowY, w: boxW, h: boxH,
+    fontFace: FONT, fontSize: 15, bold: true, color: "FFFFFF", align: "center", valign: "middle",
+  });
+
+  // Arrow 2
+  s.addText("→", {
+    x: 5.8, y: flowY, w: 0.6, h: boxH,
+    fontFace: FONT, fontSize: 28, color: C.gray, align: "center", valign: "middle",
+  });
+
+  // Head
+  s.addShape(SHAPES.RECTANGLE, {
+    x: 6.4, y: flowY, w: boxW, h: boxH,
+    fill: { color: C.green },
+  });
+  s.addText("MLP Head h\n3 layers", {
+    x: 6.4, y: flowY, w: boxW, h: boxH,
+    fontFace: FONT, fontSize: 15, bold: true, color: "FFFFFF", align: "center", valign: "middle",
+  });
+
+  // Arrow 3
+  s.addText("→", {
+    x: 8.6, y: flowY, w: 0.6, h: boxH,
+    fontFace: FONT, fontSize: 28, color: C.gray, align: "center", valign: "middle",
+  });
+
+  // Centering
+  s.addShape(SHAPES.RECTANGLE, {
+    x: 9.2, y: flowY, w: 1.8, h: boxH,
+    fill: { color: C.accent },
+  });
+  s.addText("Centering\n- c", {
+    x: 9.2, y: flowY, w: 1.8, h: boxH,
+    fontFace: FONT, fontSize: 15, bold: true, color: "FFFFFF", align: "center", valign: "middle",
+  });
+
+  // Arrow 4
+  s.addText("→", {
+    x: 11, y: flowY, w: 0.6, h: boxH,
+    fontFace: FONT, fontSize: 28, color: C.gray, align: "center", valign: "middle",
+  });
+
+  // Output
+  s.addShape(SHAPES.RECTANGLE, {
+    x: 11.6, y: flowY, w: 1.2, h: boxH,
+    fill: { color: C.cream },
+    line: { color: C.gray, pt: 1 },
+  });
+  s.addText("P_t\nK dims", {
+    x: 11.6, y: flowY, w: 1.2, h: boxH,
+    fontFace: FONT, fontSize: 15, color: C.black, align: "center", valign: "middle",
+  });
+
+  // Key differences
+  s.addText("Khác với Student:", {
+    x: M, y: 4.5, w: 4, h: 0.5,
+    fontFace: FONT, fontSize: 22, bold: true, color: C.green,
+  });
+
+  s.addText("• Input: Global crops (224×224) - thấy nhiều hơn\n• Có thêm Centering: output ← output - c\n• KHÔNG train trực tiếp - dùng EMA", {
+    x: M, y: 5.1, w: CW, h: 1.3,
+    fontFace: FONT, fontSize: 20, color: C.black,
   });
 
   addProgress(s, 2);
 
-  s.addNotes(`[VẤN ĐỀ COLLAPSE]
+  s.addNotes(`Teacher network architecture:
 
-Đây là vấn đề LỚN NHẤT của self-supervised learning.
+Cùng kiến trúc với Student nhưng:
 
-Mode collapse: Teacher và Student "thông đồng" - cả hai output cùng 1 vector cho MỌI ảnh.
-- Ảnh mèo → [0.5, 0.5, ...]
-- Ảnh chó → [0.5, 0.5, ...]
-- Ảnh xe → [0.5, 0.5, ...]
+1. Input khác:
+   - Teacher: global crops 224×224
+   - Student: local crops 96×96
+   - Teacher thấy toàn cảnh, Student thấy chi tiết
 
-Loss = 0, training "thành công" nhưng model không học được gì!
+2. Thêm Centering:
+   - output ← output - c
+   - c = trung bình output của batch
+   - Ngăn collapse
 
-Uniform collapse: Output trải đều như uniform distribution - cũng không có ý nghĩa.
-
-Contrastive learning (SimCLR, MoCo) giải quyết bằng negative samples.
-DINO có cách khác - KHÔNG cần negatives.
-
-3 tricks tiếp theo sẽ giải quyết vấn đề này.`);
+3. Cập nhật khác:
+   - KHÔNG dùng gradient descent
+   - Dùng EMA từ Student weights
+   - Sẽ giải thích chi tiết ở slide EMA`);
 
   return s;
 }

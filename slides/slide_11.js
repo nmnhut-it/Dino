@@ -1,77 +1,103 @@
 /**
- * Slide 11: Multi-crop Strategy
+ * Slide 11: Loss - Final DINO Loss Formula
  */
 
 const {
   C, FONT, M, CW,
-  addTitle, addProgress, addPlaceholder, addTable
-} = require('./config');
+  addTitle, addProgress, addFormula
+, SHAPES } = require('./config');
 
 function create(pres) {
   const s = pres.addSlide();
   s.background = { color: C.bg };
 
-  addTitle(s, "Multi-crop: Từ Chi Tiết Suy Ra Toàn Cảnh", C.v1);
+  addTitle(s, "Loss", C.v1);
 
-  // Minh họa
-  addPlaceholder(s, M, 1.3, 6.5, 4,
-    "Ảnh gốc → 2 global crops lớn + 6 local crops nhỏ", C.v1);
+  // Main loss formula
+  addFormula(s, "L = - Σₖ P_t(x)[k] · log P_s(x')[k]", M, 1.4, CW, 0.8, C.v1);
 
-  // Insight
-  s.addText("Ý tưởng hay nhất của DINO:", {
-    x: 7.2, y: 1.3, w: 5.6, h: 0.4,
-    fontFace: FONT, fontSize: 20, bold: true, color: C.v1,
-  });
-  s.addText("\"Chỉ thấy VÂY CÁ thôi\n→ phải đoán được đây là CON CÁ\"", {
-    x: 7.2, y: 1.7, w: 5.6, h: 0.8,
-    fontFace: FONT, fontSize: 20, italic: true, color: C.accent,
+  // Explanation
+  s.addText("Cross-entropy: Student output phải giống Teacher", {
+    x: M, y: 2.4, w: CW, h: 0.5,
+    fontFace: FONT, fontSize: 20, color: C.gray, align: "center",
   });
 
-  // Bảng
-  addTable(s,
-    ["Loại Crop", "Kích thước", "Phủ bao nhiêu ảnh", "Đưa vào"],
-    [
-      ["Global (2 cái)", "224×224", "> 50%", "Teacher"],
-      ["Local (6 cái)", "96×96", "< 50%", "Student"],
-    ],
-    7.2, 2.8, 5.6
-  );
-
-  // Tại sao buộc hiểu
-  s.addText("Tại sao buộc học semantic:", {
-    x: 7.2, y: 4.2, w: 5.6, h: 0.4,
-    fontFace: FONT, fontSize: 18, bold: true, color: C.black,
-  });
-  s.addText("Student chỉ thấy cánh chim → phải predict \"đây là con chim\"\n\n→ BUỘC phải hiểu KHÁI NIỆM, không thể chỉ copy pixels!", {
-    x: 7.2, y: 4.6, w: 5.6, h: 1.2,
-    fontFace: FONT, fontSize: 16, color: C.gray,
+  // P_s and P_t formulas
+  s.addShape(SHAPES.RECTANGLE, {
+    x: M, y: 3.1, w: 6, h: 1.6,
+    fill: { color: "F5F5F5" },
+    line: { color: C.v1, pt: 1 },
   });
 
-  // Chi phí
-  s.addText("Chi phí: ~2.4× compute, nhưng đáng giá vì học được semantics", {
-    x: M, y: 5.8, w: CW, h: 0.4,
-    fontFace: FONT, fontSize: 15, italic: true, color: C.medGray,
+  s.addText("Student:", {
+    x: M + 0.2, y: 3.3, w: 2, h: 0.4,
+    fontFace: FONT, fontSize: 16, bold: true, color: C.v1,
+  });
+
+  s.addText("P_s = softmax(g_s(x') / τ_s)", {
+    x: M + 0.2, y: 3.7, w: 5.6, h: 0.4,
+    fontFace: "Consolas", fontSize: 16, color: C.black,
+  });
+
+  s.addText("τ_s = 0.1", {
+    x: M + 0.2, y: 4.2, w: 5.6, h: 0.4,
+    fontFace: "Consolas", fontSize: 14, color: C.gray,
+  });
+
+  s.addShape(SHAPES.RECTANGLE, {
+    x: 6.9, y: 3.1, w: 6, h: 1.6,
+    fill: { color: "F5F5F5" },
+    line: { color: C.green, pt: 1 },
+  });
+
+  s.addText("Teacher:", {
+    x: 7.1, y: 3.3, w: 2, h: 0.4,
+    fontFace: FONT, fontSize: 16, bold: true, color: C.green,
+  });
+
+  s.addText("P_t = softmax((g_t(x) - c) / τ_t)", {
+    x: 7.1, y: 3.7, w: 5.6, h: 0.4,
+    fontFace: "Consolas", fontSize: 16, color: C.black,
+  });
+
+  s.addText("τ_t = 0.04, c = centering", {
+    x: 7.1, y: 4.2, w: 5.6, h: 0.4,
+    fontFace: "Consolas", fontSize: 14, color: C.gray,
+  });
+
+  // Summary
+  s.addText("x = global crop (Teacher)    x' = local/global crop (Student)", {
+    x: M, y: 5.0, w: CW, h: 0.4,
+    fontFace: FONT, fontSize: 16, color: C.gray, align: "center",
+  });
+
+  s.addText("K = 65536 dimensions (prototypes)", {
+    x: M, y: 5.5, w: CW, h: 0.4,
+    fontFace: FONT, fontSize: 18, bold: true, color: C.black, align: "center",
   });
 
   addProgress(s, 2);
 
-  s.addNotes(`[MULTI-CROP]
+  s.addNotes(`DINO Loss Function:
 
-Đây là insight HAY NHẤT của DINO.
+L = -Σₖ P_t(x)[k] · log P_s(x')[k]
 
-Teacher nhìn global view (>50% ảnh) - thấy cả con cá.
-Student nhìn local view (<50% ảnh) - chỉ thấy vây, hoặc mắt.
+Đây là cross-entropy loss giữa:
+- P_t: Teacher probability (target)
+- P_s: Student probability (prediction)
 
-Student phải predict giống Teacher.
+Student probability:
+P_s[k] = exp(g_s(x')[k] / τ_s) / Σ exp(...)
+τ_s = 0.1 (soft)
 
-Nghĩa là: Student chỉ thấy vây cá, nhưng phải output giống Teacher (thấy cả con cá).
+Teacher probability:
+P_t[k] = exp((g_t(x)[k] - c[k]) / τ_t) / Σ exp(...)
+τ_t = 0.04 (sharp), c = centering vector
 
-Điều này BUỘC Student hiểu: "cái vây này thuộc về con cá"
-→ Học được semantic concepts mà KHÔNG cần labels!
-
-Không thể chỉ copy pixels - phải thực sự hiểu ngữ nghĩa.
-
-Chi phí tính toán tăng ~2.4×, nhưng xứng đáng.`);
+Với multi-crop:
+- x = global crop cho Teacher
+- x' = tất cả crops cho Student
+- Loss = sum over all (x, x') pairs với x ≠ x'`);
 
   return s;
 }

@@ -1,9 +1,9 @@
 /**
- * Slide 14: Data Curation Pipeline
+ * Slide 14: iBOT Loss
  */
 
 const {
-  C, FONT, FONT_MONO, M, CW,
+  C, FONT, M, CW,
   addTitle, addProgress, addPlaceholder
 , SHAPES } = require('./config');
 
@@ -11,73 +11,59 @@ function create(pres) {
   const s = pres.addSlide();
   s.background = { color: C.bg };
 
-  addTitle(s, "Data Curation: Chất Lượng Quan Trọng Hơn Số Lượng", C.v2);
+  addTitle(s, "iBOT: Che → Đoán Ý Nghĩa", C.v2);
 
-  // Pipeline
-  addPlaceholder(s, M, 1.3, 5.5, 4.5,
-    "Phễu lọc: 1.2B → 1.1B → 744M → 142M", C.v2);
+  // Visual
+  addPlaceholder(s, M, 1.4, CW, 2.5,
+    "[Student: ảnh bị che patches] ← [Teacher: ảnh đầy đủ]", C.v2);
 
-  // Các bước
-  s.addText("Pipeline xử lý:", {
-    x: 6.2, y: 1.3, w: 6.6, h: 0.4,
+  // Key difference
+  s.addShape(SHAPES.RECTANGLE, {
+    x: M, y: 4.2, w: 5.5, h: 1.8,
+    fill: { color: C.cream },
+  });
+
+  s.addText("Khác MAE:", {
+    x: M + 0.2, y: 4.4, w: 5, h: 0.4,
     fontFace: FONT, fontSize: 18, bold: true, color: C.v2,
   });
 
-  const steps = [
-    "1.2B ảnh raw (crawl từ web)",
-    "  ↓ Lọc NSFW, domains bị cấm",
-    "1.1B",
-    "  ↓ Loại trùng bằng PCA hash",
-    "  ↓ Copy-detection (sim > 0.6)",
-    "744M",
-    "  ↓ Loại ảnh giống test sets",
-    "  ↓ K-means sampling (100k clusters)",
-    "142M đã curate",
-  ];
-
-  s.addText(steps.join("\n"), {
-    x: 6.2, y: 1.7, w: 6.6, h: 3,
-    fontFace: FONT_MONO, fontSize: 14, color: C.black,
+  s.addText("MAE đoán pixels\niBOT đoán semantic tokens\n\n→ High-level meaning!", {
+    x: M + 0.2, y: 4.8, w: 5, h: 1.2,
+    fontFace: FONT, fontSize: 18, color: C.black,
   });
 
-  // Implementation
-  s.addText("Triển khai: Faiss (GPU), 20 nodes × 8 V100", {
-    x: 6.2, y: 4.8, w: 6.6, h: 0.4,
-    fontFace: FONT, fontSize: 14, italic: true, color: C.medGray,
-  });
-
-  // Key finding
+  // Why it matters
   s.addShape(SHAPES.RECTANGLE, {
-    x: M, y: 5.8, w: CW, h: 0.7,
-    fill: { color: "FFF3E0" },
-    line: { color: C.v2, pt: 2 },
+    x: 7, y: 4.2, w: 5.8, h: 1.8,
+    fill: { color: "E8F5E9" },
   });
-  s.addText("Kết quả bất ngờ: 142M curated THẮNG 1.2B uncurated trên MỌI benchmark!", {
-    x: M + 0.2, y: 5.9, w: CW - 0.4, h: 0.6,
-    fontFace: FONT, fontSize: 20, bold: true, color: C.v2, valign: "middle",
+
+  s.addText("Tại sao quan trọng:", {
+    x: 7.2, y: 4.4, w: 5.4, h: 0.4,
+    fontFace: FONT, fontSize: 18, bold: true, color: C.success,
+  });
+
+  s.addText("Học patch-level features\n→ Tốt cho segmentation, depth\n\nBỏ iBOT: -2.9 mIoU", {
+    x: 7.2, y: 4.8, w: 5.4, h: 1.2,
+    fontFace: FONT, fontSize: 18, color: C.black,
   });
 
   addProgress(s, 3);
 
-  s.addNotes(`[DATA CURATION]
+  s.addNotes(`iBOT = image BERT.
 
-Từ 1.2 tỉ ảnh raw, filter xuống còn 142 triệu.
+Ý tưởng:
+- Che một số patches
+- Student đoán semantic token (không phải pixel)
 
-Các bước:
-1. Lọc NSFW, restricted domains
-2. Loại trùng bằng PCA hash
-3. Copy-detection với cosine similarity > 0.6
-4. Loại ảnh quá giống test benchmarks (tránh data leak)
-5. K-means clustering + sampling
+Khác MAE:
+- MAE: đoán "pixel này màu gì"
+- iBOT: đoán "đây là phần gì của object"
 
-Kết quả BẤT NGỜ:
-142M curated THẮNG 1.2B uncurated trên TẤT CẢ benchmarks!
-Ít hơn 8 lần mà tốt hơn.
-
-Quality > Quantity.
-
-Data xấu (duplicates, NSFW, biased) làm hại training.
-Curated data = diverse + clean + balanced.`);
+Kết quả:
+- Frozen iBOT features tốt như fine-tuned MAE
+- Bỏ iBOT: mất 2.9 mIoU trên segmentation`);
 
   return s;
 }
